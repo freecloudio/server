@@ -12,6 +12,5 @@ type User struct {
 	Email     string `json:"email,omitempty"`
 	Password  string `json:"password,omitempty"`
 
-	IsAdmin     bool  `json:"is_admin,omitempty"`
-	LastSession int64 `json:"last_session,omitempty"`
+	IsAdmin bool `json:"is_admin,omitempty"`
 }

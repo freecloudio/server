@@ -1,5 +1,11 @@
 package config
 
-func GetUserPersistenceImplKey() string {
-	return "neo"
+type PersistencePluginKey string
+
+const (
+	DGraphPersistenceKey = PersistencePluginKey("dgraph")
+)
+
+func GetUserPersistencePluginKey() PersistencePluginKey {
+	return DGraphPersistenceKey
 }

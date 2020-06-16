@@ -1,19 +1,22 @@
 package persistence
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/freecloudio/server/config"
+
+	"github.com/sirupsen/logrus"
+)
 
 // PluginInitializationFunc is a func for initializing a persistence plugin
 type PluginInitializationFunc func() error
 
-// TODO: Proper type for persistence types
-var pluginInitFuncs map[string]PluginInitializationFunc
-var pluginsUsed map[string]struct{}
+var pluginInitFuncs map[config.PersistencePluginKey]PluginInitializationFunc
+var pluginsUsed map[config.PersistencePluginKey]struct{}
 
 // RegisterPluginInitialization registers the init func of a persistence
 // The func will only be called if the persitence is used
-func RegisterPluginInitialization(persistencePluginKey string, initFunc PluginInitializationFunc) {
+func RegisterPluginInitialization(persistencePluginKey config.PersistencePluginKey, initFunc PluginInitializationFunc) {
 	if pluginInitFuncs == nil {
-		pluginInitFuncs = make(map[string]PluginInitializationFunc)
+		pluginInitFuncs = make(map[config.PersistencePluginKey]PluginInitializationFunc)
 	}
 
 	pluginInitFuncs[persistencePluginKey] = initFunc
@@ -37,9 +40,9 @@ func InitializeUsedPlugins() (err error) {
 	return
 }
 
-func markPluginUsed(persistencePluginKey string) {
+func markPluginUsed(persistencePluginKey config.PersistencePluginKey) {
 	if pluginsUsed == nil {
-		pluginsUsed = make(map[string]struct{})
+		pluginsUsed = make(map[config.PersistencePluginKey]struct{})
 	}
 
 	pluginsUsed[persistencePluginKey] = struct{}{}

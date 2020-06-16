@@ -15,11 +15,11 @@ type UserPersistenceTransaction interface {
 	SaveUser(*models.User) error
 }
 
-var userPersistenceController map[string]UserPersistenceController
+var userPersistenceController map[config.PersistencePluginKey]UserPersistenceController
 
-func RegisterUserPersistenceController(persistencePluginKey string, controller UserPersistenceController) {
+func RegisterUserPersistenceController(persistencePluginKey config.PersistencePluginKey, controller UserPersistenceController) {
 	if userPersistenceController == nil {
-		userPersistenceController = make(map[string]UserPersistenceController)
+		userPersistenceController = make(map[config.PersistencePluginKey]UserPersistenceController)
 	}
 
 	userPersistenceController[persistencePluginKey] = controller
@@ -27,7 +27,7 @@ func RegisterUserPersistenceController(persistencePluginKey string, controller U
 }
 
 func GetUserPersistenceController() UserPersistenceController {
-	if ctrl, ok := userPersistenceController[config.GetUserPersistenceImplKey()]; ok {
+	if ctrl, ok := userPersistenceController[config.GetUserPersistencePluginKey()]; ok {
 		return ctrl
 	}
 	logrus.Fatal("No UserPersistenceController registered")
