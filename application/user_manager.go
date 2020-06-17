@@ -9,7 +9,7 @@ import (
 type UserManager struct{}
 
 func (mgr *UserManager) CreateUser() {
-	trans, _ := persistence.GetUserPersistenceController().StartTransaction()
-	trans.SaveUser(&models.User{})
+	trans, _ := persistence.GetUserPersistenceController().StartReadWriteTransaction()
+	trans.SaveUser(&models.User{FirstName: "Max", LastName: "Heidinger"})
 	trans.Commit()
 }

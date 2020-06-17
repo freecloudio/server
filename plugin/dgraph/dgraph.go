@@ -6,6 +6,7 @@ import (
 
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/config"
+	"github.com/freecloudio/server/plugin/dgraph/schema"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
@@ -21,6 +22,7 @@ var dg *dgo.Dgraph
 
 // InitializeDGraph connects this plugin to the dgraph database
 func InitializeDGraph() (err error) {
+	//TODO: Get vals from config
 	grpcClient, err := grpc.Dial("localhost:9080", grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	if err != nil {
 		err = fmt.Errorf("failed to initialize grpc connection to dgraph: %v", err)
@@ -34,36 +36,7 @@ func InitializeDGraph() (err error) {
 }
 
 func setSchema() error {
-	return dg.Alter(context.Background(), &api.Operation{
-		Schema: `
-			created: dateTime .
-			updated: dateTime .
-
-			first_name: string @index(hash) .
-			last_name:  string @index(hash) .
-			email:      string @index(hash) .
-			password:   string .
-			is_admin:   bool @index(bool) .
-
-			type User {
-				first_name
-				last_name
-				email
-				password
-				is_admin
-				created
-				updated
-			}
-
-			token:       string @index(hash) .
-			valid_until: dateTime .
-			for_user:    uid .
-
-			type Token {
-				token
-				valid_until
-				for_user
-			}
-		`,
-	})
+	//TODO: Improve schema concatenation
+	schema := schema.Common + "\n" + schema.User
+	return dg.Alter(context.TODO(), &api.Operation{Schema: schema})
 }

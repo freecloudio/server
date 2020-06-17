@@ -2,8 +2,10 @@ package models
 
 import "time"
 
+type UserID int64
+
 type User struct {
-	ID      int64     `json:"id,omitempty"`
+	ID      UserID    `json:"id,omitempty"`
 	Created time.Time `json:"created,omitempty"`
 	Updated time.Time `json:"updated,omitempty"`
 

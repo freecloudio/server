@@ -7,11 +7,16 @@ import (
 )
 
 type UserPersistenceController interface {
-	StartTransaction() (UserPersistenceTransaction, error)
+	StartReadTransaction() (UserPersistenceReadTransaction, error)
+	StartReadWriteTransaction() (UserPersistenceReadWriteTransaction, error)
 }
 
-type UserPersistenceTransaction interface {
-	Transaction
+type UserPersistenceReadTransaction interface {
+	GetUser(userID models.UserID) (*models.User, error)
+}
+
+type UserPersistenceReadWriteTransaction interface {
+	ReadWriteTransaction
 	SaveUser(*models.User) error
 }
 
