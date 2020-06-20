@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/freecloudio/server/application"
 	"github.com/freecloudio/server/application/persistence"
-	"github.com/freecloudio/server/domain/models"
 
+	"github.com/freecloudio/server/plugin/gin"
 	_ "github.com/freecloudio/server/plugin/neo"
 )
 
@@ -12,6 +12,7 @@ func main() {
 	persistence.InitializeUsedPlugins()
 
 	userMgr := application.UserManager{}
-	//userMgr.CreateUser()
-	userMgr.GetUser(models.UserID(1))
+
+	router := gin.NewRouter(&userMgr)
+	router.Serve(":8080")
 }

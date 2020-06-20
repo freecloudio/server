@@ -9,14 +9,35 @@ import (
 // UserManager contains all use cases related to user management
 type UserManager struct{}
 
-func (mgr *UserManager) CreateUser() {
-	trans, _ := persistence.GetUserPersistenceController().StartReadWriteTransaction()
-	trans.SaveUser(&models.User{FirstName: "Max", LastName: "Heidinger"})
-	trans.Commit()
+func (mgr *UserManager) CreateUser() (err error) {
+	trans, err := persistence.GetUserPersistenceController().StartReadWriteTransaction()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to create transaction")
+		return
+	}
+	err = trans.SaveUser(&models.User{FirstName: "Max", LastName: "Heidinger"})
+	if err != nil {
+		logrus.WithError(err).Error("Failed to save user")
+		return
+	}
+	err = trans.Commit()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to commit transaction")
+		return
+	}
+	return
 }
 
-func (mgr *UserManager) GetUser(userID models.UserID) {
-	trans, _ := persistence.GetUserPersistenceController().StartReadTransaction()
-	user, err := trans.GetUser(userID)
-	logrus.WithError(err).Printf("Got User: %v", user)
+func (mgr *UserManager) GetUser(userID models.UserID) (user *models.User, err error) {
+	trans, err := persistence.GetUserPersistenceController().StartReadTransaction()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to create transaction")
+		return
+	}
+	user, err = trans.GetUser(userID)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to get user")
+		return
+	}
+	return
 }
