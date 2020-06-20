@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/dgraph-io/dgo/v2 v2.2.0
+	github.com/neo4j/neo4j-go-driver v1.8.0
 	github.com/sirupsen/logrus v1.6.0
 	google.golang.org/grpc v1.23.0
 )
