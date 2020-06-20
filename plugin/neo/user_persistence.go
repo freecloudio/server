@@ -6,6 +6,7 @@ import (
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/config"
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/utils"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
 )
@@ -36,8 +37,19 @@ type userReadTransaction struct {
 	*transactionCtx
 }
 
-func (tx *userReadTransaction) GetUser(userID models.UserID) (*models.User, error) {
-	return nil, nil
+func (tx *userReadTransaction) GetUser(userID models.UserID) (user *models.User, err error) {
+	record, err := neo4j.Single(tx.neoTx.Run(`
+		MATCH (u:User)
+		WHERE ID(u) = $id
+		RETURN u
+	`, map[string]interface{}{"id": userID}))
+	if err != nil {
+		return
+	}
+
+	user = &models.User{}
+	err = recordToModel(record, "u", user)
+	return
 }
 
 type userReadWriteTransaction struct {
@@ -45,41 +57,27 @@ type userReadWriteTransaction struct {
 }
 
 func (tx *userReadWriteTransaction) SaveUser(user *models.User) (err error) {
-	res, err := tx.neoTx.Run(`
-		CREATE (u:User { 
-			first_name: $first_name,
-			last_name: $last_name,
-			email: $email,
-			password: $password,
-			is_admin: $is_admin,
-			created: $created,
-			updated: $updated
-		})
-		RETURN id(u) as id
-		`, map[string]interface{}{
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-		"email":      user.Email,
-		"password":   user.Password,
-		"is_admin":   user.IsAdmin,
-		"created":    user.Created,
-		"updated":    user.Updated,
-	})
+	currTime := utils.GetCurrentTime()
+	user.Created = currTime
+	user.Updated = currTime
+
+	record, err := neo4j.Single(tx.neoTx.Run(`
+		CREATE (u:User $user)
+		RETURN ID(u) as id
+		`,
+		map[string]interface{}{
+			"user": modelToMap(user),
+		}))
 	if err != nil {
 		return err
 	}
 
-	if res.Next() {
-		userID, ok := res.Record().GetByIndex(0).(models.UserID)
-		if !ok {
-			err = fmt.Errorf("Failed to convert value to userID: %v", res.Record().GetByIndex(0))
-			return
-		}
-		user.ID = userID
-	} else {
-		err = fmt.Errorf("Result does not contain result row")
+	userID, ok := record.GetByIndex(0).(models.UserID)
+	if !ok {
+		err = fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0))
 		return
 	}
+	user.ID = userID
 
 	return
 }
