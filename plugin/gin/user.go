@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
+	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/domain/models"
 )
 
@@ -25,9 +26,9 @@ func (r *Router) getUserID(c *gin.Context) {
 		return
 	}
 
-	user, err := r.userMgr.GetUser(userID)
+	user, err := r.userMgr.GetUser(authorization.NewSystem(), userID)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to create user")
+		logrus.WithError(err).Error("Failed to get user")
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/config"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -33,6 +34,38 @@ func noEncrypted(config *neo4j.Config) {
 type transactionCtx struct {
 	session neo4j.Session
 	neoTx   neo4j.Transaction
+}
+
+func (trCtx *transactionCtx) Commit() (err error) {
+	txErr := trCtx.neoTx.Commit()
+	if txErr != nil {
+		logrus.WithError(txErr).Error("Failed to commit neo transaction - close session anyway")
+		err = txErr
+	}
+	sessErr := trCtx.session.Close()
+	if sessErr != nil {
+		logrus.WithError(sessErr).Error("Failed to close neo session")
+		if err == nil {
+			err = sessErr
+		}
+	}
+	return
+}
+
+func (trCtx *transactionCtx) Rollback() (err error) {
+	txErr := trCtx.neoTx.Rollback()
+	if txErr != nil {
+		logrus.WithError(txErr).Error("Failed to rollback neo transaction - close session anyway")
+		err = txErr
+	}
+	sessErr := trCtx.session.Close()
+	if sessErr != nil {
+		logrus.WithError(sessErr).Error("Failed to close neo session")
+		if err == nil {
+			err = sessErr
+		}
+	}
+	return
 }
 
 func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, err error) {

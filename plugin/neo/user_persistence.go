@@ -21,14 +21,16 @@ func (up *UserPersistence) StartReadTransaction() (tx persistence.UserPersistenc
 	txCtx, err := newTransactionContext(neo4j.AccessModeRead)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create neo read transaction")
+		return
 	}
 	return &userReadTransaction{txCtx}, nil
 }
 
-func (up *UserPersistence) StartReadWriteTransaction() (persistence.UserPersistenceReadWriteTransaction, error) {
+func (up *UserPersistence) StartReadWriteTransaction() (tx persistence.UserPersistenceReadWriteTransaction, err error) {
 	txCtx, err := newTransactionContext(neo4j.AccessModeWrite)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create neo write transaction")
+		return
 	}
 	return &userReadWriteTransaction{txCtx}, nil
 }
@@ -72,44 +74,12 @@ func (tx *userReadWriteTransaction) SaveUser(user *models.User) (err error) {
 		return err
 	}
 
-	userID, ok := record.GetByIndex(0).(models.UserID)
+	userIDInt, ok := record.GetByIndex(0).(int64)
 	if !ok {
 		err = fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0))
 		return
 	}
-	user.ID = userID
+	user.ID = models.UserID(userIDInt)
 
-	return
-}
-
-func (tx *userReadWriteTransaction) Commit() (err error) {
-	txErr := tx.neoTx.Commit()
-	if txErr != nil {
-		logrus.WithError(txErr).Error("Failed to commit neo transaction - close session anyway")
-		err = txErr
-	}
-	sessErr := tx.session.Close()
-	if sessErr != nil {
-		logrus.WithError(sessErr).Error("Failed to close neo session")
-		if err == nil {
-			err = sessErr
-		}
-	}
-	return
-}
-
-func (tx *userReadWriteTransaction) Rollback() (err error) {
-	txErr := tx.neoTx.Rollback()
-	if txErr != nil {
-		logrus.WithError(txErr).Error("Failed to rollback neo transaction - close session anyway")
-		err = txErr
-	}
-	sessErr := tx.session.Close()
-	if sessErr != nil {
-		logrus.WithError(sessErr).Error("Failed to close neo session")
-		if err == nil {
-			err = sessErr
-		}
-	}
 	return
 }

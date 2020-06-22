@@ -12,6 +12,7 @@ func main() {
 	persistence.InitializeUsedPlugins()
 
 	userMgr := application.UserManager{}
+	_ = application.AuthManager{}
 
 	router := gin.NewRouter(&userMgr)
 	router.Serve(":8080")
