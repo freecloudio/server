@@ -1,7 +1,7 @@
 package persistence
 
 import (
-	"github.com/freecloudio/server/config"
+	"github.com/freecloudio/server/application/config"
 
 	"github.com/sirupsen/logrus"
 )

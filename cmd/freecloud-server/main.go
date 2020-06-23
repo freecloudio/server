@@ -6,14 +6,17 @@ import (
 
 	"github.com/freecloudio/server/plugin/gin"
 	_ "github.com/freecloudio/server/plugin/neo"
+	"github.com/freecloudio/server/plugin/viperplg"
 )
 
 func main() {
 	persistence.InitializeUsedPlugins()
 
-	userMgr := application.UserManager{}
-	_ = application.AuthManager{}
+	cfg := viperplg.InitViperConfig()
 
-	router := gin.NewRouter(&userMgr)
+	userMgr := application.NewUserManager(cfg)
+	_ = application.NewAuthManager(cfg)
+
+	router := gin.NewRouter(userMgr)
 	router.Serve(":8080")
 }

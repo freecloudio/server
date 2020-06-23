@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
-	"github.com/freecloudio/server/config"
+
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
 )

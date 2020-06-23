@@ -1,7 +1,7 @@
 package persistence
 
 import (
-	"github.com/freecloudio/server/config"
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/domain/models"
 
 	"github.com/sirupsen/logrus"
@@ -32,8 +32,8 @@ func RegisterAuthPersistenceController(persistencePluginKey config.PersistencePl
 	markPluginUsed(persistencePluginKey)
 }
 
-func GetAuthPersistenceController() AuthPersistenceController {
-	if ctrl, ok := authPersistenceController[config.GetAuthPersistencePluginKey()]; ok {
+func GetAuthPersistenceController(cfg config.Config) AuthPersistenceController {
+	if ctrl, ok := authPersistenceController[cfg.GetAuthPersistencePluginKey()]; ok {
 		return ctrl
 	}
 	logrus.Fatal("No AuthPersistenceController registered")

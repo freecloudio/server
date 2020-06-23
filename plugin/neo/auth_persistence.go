@@ -1,8 +1,8 @@
 package neo
 
 import (
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
-	"github.com/freecloudio/server/config"
 	"github.com/freecloudio/server/domain/models"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"

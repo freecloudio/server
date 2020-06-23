@@ -12,10 +12,10 @@ import (
 type Router struct {
 	engine *gin.Engine
 
-	userMgr *application.UserManager
+	userMgr application.UserManager
 }
 
-func NewRouter(userMgr *application.UserManager) (router *Router) {
+func NewRouter(userMgr application.UserManager) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
