@@ -3,31 +3,28 @@ package persistence
 import (
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/domain/models/fcerror"
 
 	"github.com/sirupsen/logrus"
 )
 
 type AuthPersistenceController interface {
-	StartReadTransaction() (AuthPersistenceReadTransaction, error)
-	StartReadWriteTransaction() (AuthPersistenceReadWriteTransaction, error)
+	StartReadTransaction() (AuthPersistenceReadTransaction, *fcerror.Error)
+	StartReadWriteTransaction() (AuthPersistenceReadWriteTransaction, *fcerror.Error)
 }
 
 type AuthPersistenceReadTransaction interface {
-	CheckToken(tokenValue models.TokenValue) (*models.Token, error)
+	CheckToken(tokenValue models.TokenValue) (*models.Token, *fcerror.Error)
 }
 
 type AuthPersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
-	SaveToken(token *models.Token) error
+	SaveToken(token *models.Token) *fcerror.Error
 }
 
-var authPersistenceController map[config.PersistencePluginKey]AuthPersistenceController
+var authPersistenceController = map[config.PersistencePluginKey]AuthPersistenceController{}
 
 func RegisterAuthPersistenceController(persistencePluginKey config.PersistencePluginKey, controller AuthPersistenceController) {
-	if authPersistenceController == nil {
-		authPersistenceController = make(map[config.PersistencePluginKey]AuthPersistenceController)
-	}
-
 	authPersistenceController[persistencePluginKey] = controller
 	markPluginUsed(persistencePluginKey)
 }

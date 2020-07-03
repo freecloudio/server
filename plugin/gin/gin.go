@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/freecloudio/server/application"
+	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	ginlogrus "github.com/toorop/gin-logrus"
@@ -39,4 +40,13 @@ func (r *Router) buildRoutes() {
 	r.engine.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Ok")
 	})
+}
+
+func errToStatus(fcerr *fcerror.Error) int {
+	switch fcerr.ID {
+	case fcerror.ErrIDUserNotFound:
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
 }

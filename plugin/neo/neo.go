@@ -8,6 +8,7 @@ import (
 
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
+	"github.com/freecloudio/server/domain/models/fcerror"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
@@ -37,7 +38,8 @@ type transactionCtx struct {
 	neoTx   neo4j.Transaction
 }
 
-func (trCtx *transactionCtx) Commit() (err error) {
+func (trCtx *transactionCtx) Commit() *fcerror.Error {
+	var err error
 	txErr := trCtx.neoTx.Commit()
 	if txErr != nil {
 		logrus.WithError(txErr).Error("Failed to commit neo transaction - close session anyway")
@@ -50,10 +52,11 @@ func (trCtx *transactionCtx) Commit() (err error) {
 			err = sessErr
 		}
 	}
-	return
+	return fcerror.NewError(fcerror.ErrIDDBCommitFailed, err)
 }
 
-func (trCtx *transactionCtx) Rollback() (err error) {
+func (trCtx *transactionCtx) Rollback() *fcerror.Error {
+	var err error
 	txErr := trCtx.neoTx.Rollback()
 	if txErr != nil {
 		logrus.WithError(txErr).Error("Failed to rollback neo transaction - close session anyway")
@@ -66,7 +69,7 @@ func (trCtx *transactionCtx) Rollback() (err error) {
 			err = sessErr
 		}
 	}
-	return
+	return fcerror.NewError(fcerror.ErrIDDBRollbackFailed, err)
 }
 
 func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, err error) {
@@ -157,5 +160,26 @@ func getDBFieldName(typeField reflect.StructField) *string {
 		return &fieldTag
 	} else {
 		return &(typeField.Name)
+	}
+}
+
+func isNotFoundError(err error) bool {
+	if strings.Contains(err.Error(), "result contains no records") {
+		return true
+	}
+	return false
+}
+
+func neoToFcError(err error, notfound fcerror.ErrorID, other fcerror.ErrorID) *fcerror.Error {
+	if err == nil {
+		return nil
+	} else if isNotFoundError(err) {
+		return fcerror.NewError(notfound, err)
+	} else if neo4j.IsAuthenticationError(err) || neo4j.IsSecurityError(err) {
+		return fcerror.NewError(fcerror.ErrIDDBAuthentication, err)
+	} else if neo4j.IsServiceUnavailable(err) {
+		return fcerror.NewError(fcerror.ErrIDDBAuthentication, err)
+	} else {
+		return fcerror.NewError(other, err)
 	}
 }

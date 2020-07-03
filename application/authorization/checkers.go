@@ -1,14 +1,13 @@
 package authorization
 
 import (
-	"errors"
-
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/domain/models/fcerror"
 )
 
-var errUnauthorized = errors.New("Unauthorized")
+var errUnauthorized = fcerror.NewError(fcerror.ErrIDNotAuthorized, nil)
 
-func EnforceSystem(ctx *Context) error {
+func EnforceSystem(ctx *Context) *fcerror.Error {
 	switch ctx.Type {
 	case ContextTypeSystem:
 		return nil
@@ -17,7 +16,7 @@ func EnforceSystem(ctx *Context) error {
 	}
 }
 
-func EnforceAdmin(ctx *Context) error {
+func EnforceAdmin(ctx *Context) *fcerror.Error {
 	switch ctx.Type {
 	case ContextTypeSystem:
 		return nil
@@ -31,7 +30,7 @@ func EnforceAdmin(ctx *Context) error {
 	}
 }
 
-func EnforceUser(ctx *Context) error {
+func EnforceUser(ctx *Context) *fcerror.Error {
 	switch ctx.Type {
 	case ContextTypeSystem, ContextTypeUser:
 		return nil
@@ -40,7 +39,7 @@ func EnforceUser(ctx *Context) error {
 	}
 }
 
-func EnforceSelf(ctx *Context, targetUserID models.UserID) error {
+func EnforceSelf(ctx *Context, targetUserID models.UserID) *fcerror.Error {
 	switch ctx.Type {
 	case ContextTypeSystem:
 		return nil

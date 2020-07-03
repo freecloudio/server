@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"github.com/freecloudio/server/application/config"
+	"github.com/freecloudio/server/domain/models/fcerror"
 
 	"github.com/sirupsen/logrus"
 )
@@ -9,16 +10,12 @@ import (
 // PluginInitializationFunc is a func for initializing a persistence plugin
 type PluginInitializationFunc func() error
 
-var pluginInitFuncs map[config.PersistencePluginKey]PluginInitializationFunc
-var pluginsUsed map[config.PersistencePluginKey]struct{}
+var pluginInitFuncs = map[config.PersistencePluginKey]PluginInitializationFunc{}
+var pluginsUsed = map[config.PersistencePluginKey]struct{}{}
 
 // RegisterPluginInitialization registers the init func of a persistence
 // The func will only be called if the persitence is used
 func RegisterPluginInitialization(persistencePluginKey config.PersistencePluginKey, initFunc PluginInitializationFunc) {
-	if pluginInitFuncs == nil {
-		pluginInitFuncs = make(map[config.PersistencePluginKey]PluginInitializationFunc)
-	}
-
 	pluginInitFuncs[persistencePluginKey] = initFunc
 }
 
@@ -41,15 +38,11 @@ func InitializeUsedPlugins() (err error) {
 }
 
 func markPluginUsed(persistencePluginKey config.PersistencePluginKey) {
-	if pluginsUsed == nil {
-		pluginsUsed = make(map[config.PersistencePluginKey]struct{})
-	}
-
 	pluginsUsed[persistencePluginKey] = struct{}{}
 }
 
 // ReadWriteTransaction stands for a transaction of any persistence plugin
 type ReadWriteTransaction interface {
-	Commit() error
-	Rollback() error
+	Commit() *fcerror.Error
+	Rollback() *fcerror.Error
 }

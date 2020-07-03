@@ -26,10 +26,10 @@ func (r *Router) getUserID(c *gin.Context) {
 		return
 	}
 
-	user, err := r.userMgr.GetUser(authorization.NewSystem(), userID)
+	user, fcerr := r.userMgr.GetUser(authorization.NewSystem(), userID)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to get user")
-		c.String(http.StatusInternalServerError, err.Error())
+		logrus.WithError(fcerr).Error("Failed to get user")
+		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
 

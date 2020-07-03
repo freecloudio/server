@@ -5,12 +5,13 @@ import (
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
 	"github.com/sirupsen/logrus"
 )
 
 type AuthManager interface {
-	CreateNewToken(authCtx *authorization.Context, userID models.UserID) (*models.Token, error)
+	CreateNewToken(authCtx *authorization.Context, userID models.UserID) (*models.Token, *fcerror.Error)
 }
 
 func NewAuthManager(cfg config.Config) AuthManager {
@@ -25,9 +26,9 @@ type authManager struct {
 	authPersistence persistence.AuthPersistenceController
 }
 
-func (mgr *authManager) CreateNewToken(authCtx *authorization.Context, userID models.UserID) (token *models.Token, err error) {
-	err = authorization.EnforceSelf(authCtx, userID)
-	if err != nil {
+func (mgr *authManager) CreateNewToken(authCtx *authorization.Context, userID models.UserID) (token *models.Token, fcerr *fcerror.Error) {
+	fcerr = authorization.EnforceSelf(authCtx, userID)
+	if fcerr != nil {
 		return
 	}
 
@@ -37,21 +38,21 @@ func (mgr *authManager) CreateNewToken(authCtx *authorization.Context, userID mo
 		UserID:     userID,
 	}
 
-	trans, err := mgr.authPersistence.StartReadWriteTransaction()
-	if err != nil {
-		logrus.WithError(err).Error("Failed to create transaction")
+	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
-	err = trans.SaveToken(token)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to save user")
+	fcerr = trans.SaveToken(token)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to save user")
 		trans.Rollback()
 		return
 	}
-	err = trans.Commit()
-	if err != nil {
-		logrus.WithError(err).Error("Failed to commit transaction")
+	fcerr = trans.Commit()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
-	return
+	return token, nil
 }
