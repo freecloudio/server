@@ -14,11 +14,13 @@ type UserPersistenceController interface {
 }
 
 type UserPersistenceReadTransaction interface {
-	GetUser(userID models.UserID) (*models.User, *fcerror.Error)
+	GetUserByID(userID models.UserID) (*models.User, *fcerror.Error)
+	GetUserByEmail(email string) (*models.User, *fcerror.Error)
 }
 
 type UserPersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
+	UserPersistenceReadTransaction
 	SaveUser(*models.User) *fcerror.Error
 }
 

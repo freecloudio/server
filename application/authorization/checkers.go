@@ -5,7 +5,7 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 )
 
-var errUnauthorized = fcerror.NewError(fcerror.ErrIDNotAuthorized, nil)
+var errUnauthorized = fcerror.NewError(fcerror.ErrNotAuthorized, nil)
 
 func EnforceSystem(ctx *Context) *fcerror.Error {
 	switch ctx.Type {

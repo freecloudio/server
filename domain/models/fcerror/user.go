@@ -1,9 +1,11 @@
 package fcerror
 
 const (
-	ErrIDUserNotFound = iota + 100
+	ErrUserNotFound = iota + 100
+	ErrEmailAlreadyRegisters
 )
 
 func init() {
-	errorDescriptions[ErrIDUserNotFound] = "User not found"
+	errorDescriptions[ErrUserNotFound] = "User not found"
+	errorDescriptions[ErrEmailAlreadyRegisters] = "User with this email address is already registered"
 }

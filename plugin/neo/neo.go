@@ -53,7 +53,7 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 		}
 	}
 	if err != nil {
-		return fcerror.NewError(fcerror.ErrIDDBCommitFailed, err)
+		return fcerror.NewError(fcerror.ErrDBCommitFailed, err)
 	} else {
 		return nil
 	}
@@ -73,7 +73,7 @@ func (trCtx *transactionCtx) Rollback() *fcerror.Error {
 			err = sessErr
 		}
 	}
-	return fcerror.NewError(fcerror.ErrIDDBRollbackFailed, err)
+	return fcerror.NewError(fcerror.ErrDBRollbackFailed, err)
 }
 
 func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, err error) {
@@ -177,9 +177,9 @@ func neoToFcError(err error, notfound fcerror.ErrorID, other fcerror.ErrorID) *f
 	} else if isNotFoundError(err) {
 		return fcerror.NewError(notfound, err)
 	} else if neo4j.IsAuthenticationError(err) || neo4j.IsSecurityError(err) {
-		return fcerror.NewError(fcerror.ErrIDDBAuthentication, err)
+		return fcerror.NewError(fcerror.ErrDBAuthentication, err)
 	} else if neo4j.IsServiceUnavailable(err) {
-		return fcerror.NewError(fcerror.ErrIDDBAuthentication, err)
+		return fcerror.NewError(fcerror.ErrDBAuthentication, err)
 	} else {
 		return fcerror.NewError(other, err)
 	}

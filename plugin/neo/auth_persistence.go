@@ -20,7 +20,7 @@ func (up *AuthPersistence) StartReadTransaction() (tx persistence.AuthPersistenc
 	txCtx, err := newTransactionContext(neo4j.AccessModeRead)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create neo read transaction")
-		fcerr = fcerror.NewError(fcerror.ErrIDDBTransactionCreationFailed, err)
+		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		return
 	}
 	return &authReadTransaction{txCtx}, nil
@@ -30,7 +30,7 @@ func (up *AuthPersistence) StartReadWriteTransaction() (tx persistence.AuthPersi
 	txCtx, err := newTransactionContext(neo4j.AccessModeWrite)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create neo write transaction")
-		fcerr = fcerror.NewError(fcerror.ErrIDDBTransactionCreationFailed, err)
+		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		return
 	}
 	return &authReadWriteTransaction{txCtx}, nil
@@ -41,6 +41,7 @@ type authReadTransaction struct {
 }
 
 func (tx *authReadTransaction) CheckToken(tokenValue models.TokenValue) (token *models.Token, fcerr *fcerror.Error) {
+	// TODO
 	return
 }
 
@@ -58,5 +59,5 @@ func (tx *authReadWriteTransaction) SaveToken(token *models.Token) *fcerror.Erro
 			"t": modelToMap(token),
 		})
 
-	return neoToFcError(err, fcerror.ErrIDUserNotFound, fcerror.ErrIDDBWriteFailed)
+	return neoToFcError(err, fcerror.ErrUserNotFound, fcerror.ErrDBWriteFailed)
 }

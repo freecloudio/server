@@ -14,9 +14,8 @@ func main() {
 
 	cfg := viperplg.InitViperConfig()
 
-	userMgr := application.NewUserManager(cfg)
-	_ = application.NewAuthManager(cfg)
+	authMgr := application.NewAuthManager(cfg)
 
-	router := gin.NewRouter(userMgr)
+	router := gin.NewRouter(authMgr)
 	router.Serve(":8080")
 }

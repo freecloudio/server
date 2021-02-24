@@ -1,19 +1,19 @@
 package fcerror
 
 const (
-	ErrIDDBTransactionCreationFailed = iota + 300
-	ErrIDDBWriteFailed
-	ErrIDDBCommitFailed
-	ErrIDDBRollbackFailed
-	ErrIDDBAuthentication
-	ErrIDDBUnavailable
+	ErrDBTransactionCreationFailed = iota + 300
+	ErrDBWriteFailed
+	ErrDBCommitFailed
+	ErrDBRollbackFailed
+	ErrDBAuthentication
+	ErrDBUnavailable
 )
 
 func init() {
-	errorDescriptions[ErrIDDBTransactionCreationFailed] = "Failed to create a DB transaction"
-	errorDescriptions[ErrIDDBWriteFailed] = "Failed to write data to DB"
-	errorDescriptions[ErrIDDBCommitFailed] = "Failed to commit DB transaction"
-	errorDescriptions[ErrIDDBRollbackFailed] = "Failed to rollback DB transaction"
-	errorDescriptions[ErrIDDBAuthentication] = "Failed to authenticate to the DB"
-	errorDescriptions[ErrIDDBUnavailable] = "Database is unavailable"
+	errorDescriptions[ErrDBTransactionCreationFailed] = "Failed to create a DB transaction"
+	errorDescriptions[ErrDBWriteFailed] = "Failed to write data to DB"
+	errorDescriptions[ErrDBCommitFailed] = "Failed to commit DB transaction"
+	errorDescriptions[ErrDBRollbackFailed] = "Failed to rollback DB transaction"
+	errorDescriptions[ErrDBAuthentication] = "Failed to authenticate to the DB"
+	errorDescriptions[ErrDBUnavailable] = "Database is unavailable"
 }

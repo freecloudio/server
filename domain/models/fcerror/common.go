@@ -1,13 +1,13 @@
 package fcerror
 
 const (
-	ErrIDUnknown = iota
-	ErrIDModelConversionFailed
+	ErrUnknown = iota
+	ErrModelConversionFailed
 	ErrBadRequest
 )
 
 func init() {
-	errorDescriptions[ErrIDUnknown] = "Unknown Error"
-	errorDescriptions[ErrIDModelConversionFailed] = "Failed to convert models"
+	errorDescriptions[ErrUnknown] = "Unknown Error"
+	errorDescriptions[ErrModelConversionFailed] = "Failed to convert models"
 	errorDescriptions[ErrBadRequest] = "Bad Request"
 }

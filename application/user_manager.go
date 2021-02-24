@@ -6,53 +6,81 @@ import (
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
 	"github.com/sirupsen/logrus"
 )
 
-// UserManager contains all use cases related to user management
-type UserManager interface {
-	CreateUser(authCtx *authorization.Context, user *models.User) *fcerror.Error
-	GetUser(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
+// AuthManager contains all use cases related to authentication and user management
+type AuthManager interface {
+	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Token, *fcerror.Error)
+	GetUserByID(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
 }
 
-func NewUserManager(cfg config.Config) UserManager {
-	return &userManager{
+func NewAuthManager(cfg config.Config) AuthManager {
+	return &authManager{
 		cfg:             cfg,
 		userPersistence: persistence.GetUserPersistenceController(cfg),
+		authPersistence: persistence.GetAuthPersistenceController(cfg),
 	}
 }
 
-type userManager struct {
+type authManager struct {
 	cfg             config.Config
 	userPersistence persistence.UserPersistenceController
+	authPersistence persistence.AuthPersistenceController
 }
 
-func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.User) (fcerr *fcerror.Error) {
+func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.User) (token *models.Token, fcerr *fcerror.Error) {
 	fcerr = authorization.EnforceAdmin(authCtx)
 	if fcerr != nil {
-		return fcerr
+		return
 	}
+
+	// TODO: Input Validation
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
+
+	existingUser, fcerr := trans.GetUserByEmail(user.Email)
+	if fcerr != nil && fcerr.ID != fcerror.ErrUserNotFound {
+		logrus.WithError(fcerr).Error("Could not verify if user with this email already exists")
+		return
+	} else if fcerr == nil && existingUser != nil {
+		fcerr = fcerror.NewError(fcerror.ErrUserNotFound, nil)
+		return
+	}
+
+	user.Password, fcerr = utils.HashScrypt(user.Password)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to hash new user password")
+		return
+	}
+	user.IsAdmin = false
+
 	fcerr = trans.SaveUser(user)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to save user")
 		trans.Rollback()
 		return
 	}
+
+	// Make first user an admin
+	if user.ID == 0 {
+		// TODO
+	}
+
 	fcerr = trans.Commit()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
-	return
+	return mgr.createNewToken(user.ID)
 }
 
-func (mgr *userManager) GetUser(authCtx *authorization.Context, userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
+func (mgr *authManager) GetUserByID(authCtx *authorization.Context, userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
 	fcerr = authorization.EnforceSelf(authCtx, userID)
 	if fcerr != nil {
 		return
@@ -63,10 +91,36 @@ func (mgr *userManager) GetUser(authCtx *authorization.Context, userID models.Us
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
-	user, fcerr = trans.GetUser(userID)
+	user, fcerr = trans.GetUserByID(userID)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to get user")
 		return
 	}
 	return
+}
+
+func (mgr *authManager) createNewToken(userID models.UserID) (token *models.Token, fcerr *fcerror.Error) {
+	token = &models.Token{
+		Value:      models.TokenValue(utils.GenerateRandomString(mgr.cfg.GetTokenValueLength())),
+		ValidUntil: utils.GetTimeIn(mgr.cfg.GetTokenExpirationDuration()),
+		UserID:     userID,
+	}
+
+	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+	fcerr = trans.SaveToken(token)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to save user")
+		trans.Rollback()
+		return
+	}
+	fcerr = trans.Commit()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to commit transaction")
+		return
+	}
+	return token, nil
 }
