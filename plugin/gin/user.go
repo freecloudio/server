@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 )
@@ -21,6 +20,8 @@ func (r *Router) buildUserRoutes() {
 }
 
 func (r *Router) registerUser(c *gin.Context) {
+	authContext := getAuthContext(c)
+
 	user := &models.User{}
 	err := c.BindJSON(user)
 	if err != nil {
@@ -30,7 +31,7 @@ func (r *Router) registerUser(c *gin.Context) {
 		return
 	}
 
-	token, fcerr := r.userMgr.CreateUser(authorization.NewSystem(), user)
+	token, fcerr := r.authMgr.CreateUser(authContext, user)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 	}
@@ -39,6 +40,8 @@ func (r *Router) registerUser(c *gin.Context) {
 }
 
 func (r *Router) getUserByID(c *gin.Context) {
+	authContext := getAuthContext(c)
+
 	userID, err := extractUserID(c)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get userID from request")
@@ -47,7 +50,7 @@ func (r *Router) getUserByID(c *gin.Context) {
 		return
 	}
 
-	user, fcerr := r.userMgr.GetUserByID(authorization.NewSystem(), userID)
+	user, fcerr := r.authMgr.GetUserByID(authContext, userID)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return

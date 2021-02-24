@@ -14,6 +14,7 @@ import (
 type AuthManager interface {
 	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Token, *fcerror.Error)
 	GetUserByID(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
+	VerifyToken(token models.TokenValue) (*models.User, *fcerror.Error)
 }
 
 func NewAuthManager(cfg config.Config) AuthManager {
@@ -30,12 +31,9 @@ type authManager struct {
 	authPersistence persistence.AuthPersistenceController
 }
 
-func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.User) (token *models.Token, fcerr *fcerror.Error) {
-	fcerr = authorization.EnforceAdmin(authCtx)
-	if fcerr != nil {
-		return
-	}
+// TODO: Session cleanup
 
+func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.User) (token *models.Token, fcerr *fcerror.Error) {
 	// TODO: Input Validation
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
@@ -97,6 +95,11 @@ func (mgr *authManager) GetUserByID(authCtx *authorization.Context, userID model
 		return
 	}
 	return
+}
+
+func (mgr *authManager) VerifyToken(token models.TokenValue) (user *models.User, fcerr *fcerror.Error) {
+	// TODO
+	return mgr.GetUserByID(authorization.NewSystem(), models.UserID(0))
 }
 
 func (mgr *authManager) createNewToken(userID models.UserID) (token *models.Token, fcerr *fcerror.Error) {

@@ -21,7 +21,7 @@ func (err *Error) MarshalJSON() ([]byte, error) {
 	type ShadowError Error
 	type Default struct {
 		*ShadowError
-		CauseMsg string `json:"cause"`
+		CauseMsg string `json:"cause,omitempty"`
 	}
 	type Nested struct {
 		*ShadowError
@@ -35,10 +35,16 @@ func (err *Error) MarshalJSON() ([]byte, error) {
 			Cause:       err.Cause.(Error),
 		})
 	default:
-		return json.Marshal(&Default{
-			ShadowError: (*ShadowError)(err),
-			CauseMsg:    err.Cause.Error(),
-		})
+		if err.Cause != nil {
+			return json.Marshal(&Default{
+				ShadowError: (*ShadowError)(err),
+				CauseMsg:    err.Cause.Error(),
+			})
+		} else {
+			return json.Marshal(&Default{
+				ShadowError: (*ShadowError)(err),
+			})
+		}
 	}
 }
 

@@ -13,17 +13,18 @@ import (
 type Router struct {
 	engine *gin.Engine
 
-	userMgr application.AuthManager
+	authMgr application.AuthManager
 }
 
-func NewRouter(userMgr application.AuthManager) (router *Router) {
+func NewRouter(authMgr application.AuthManager) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
+	ginRouter.Use(getAuthMiddleware(authMgr))
 
 	router = &Router{
 		engine:  ginRouter,
-		userMgr: userMgr,
+		authMgr: authMgr,
 	}
 	router.buildRoutes()
 
@@ -44,6 +45,10 @@ func (r *Router) buildRoutes() {
 
 func errToStatus(fcerr *fcerror.Error) int {
 	switch fcerr.ID {
+	case fcerror.ErrUnauthorized:
+		return http.StatusUnauthorized
+	case fcerror.ErrForbidden:
+		return http.StatusForbidden
 	case fcerror.ErrUserNotFound:
 		return http.StatusNotFound
 	case fcerror.ErrBadRequest:
