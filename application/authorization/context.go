@@ -15,10 +15,14 @@ type Context struct {
 	User *models.User
 }
 
-func NewAnonymous() *Context {
-	return &Context{Type: ContextTypeAnonymous}
-}
-
 func NewSystem() *Context {
 	return &Context{Type: ContextTypeSystem}
+}
+
+func NewUser(user *models.User) *Context {
+	return &Context{Type: ContextTypeUser, User: user}
+}
+
+func NewAnonymous() *Context {
+	return &Context{Type: ContextTypeAnonymous}
 }

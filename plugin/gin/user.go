@@ -10,25 +10,43 @@ import (
 
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/domain/models/fcerror"
 )
 
 const userIDParam = "user_id"
 
 func (r *Router) buildUserRoutes() {
-	r.engine.GET("/api/user/:"+userIDParam, r.getUserID)
+	r.engine.POST("/api/user/", r.registerUser)
+	r.engine.GET("/api/user/:"+userIDParam, r.getUserByID)
 }
 
-func (r *Router) getUserID(c *gin.Context) {
+func (r *Router) registerUser(c *gin.Context) {
+	user := &models.User{}
+	err := c.BindJSON(user)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to parse request into user")
+		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	fcerr := r.userMgr.CreateUser(authorization.NewSystem(), user)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+	}
+}
+
+func (r *Router) getUserByID(c *gin.Context) {
 	userID, err := extractUserID(c)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get userID from request")
-		c.String(http.StatusBadRequest, err.Error())
+		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
+		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
 
 	user, fcerr := r.userMgr.GetUser(authorization.NewSystem(), userID)
-	if err != nil {
-		logrus.WithError(fcerr).Error("Failed to get user")
+	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}

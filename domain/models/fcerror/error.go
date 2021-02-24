@@ -1,17 +1,45 @@
 package fcerror
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type ErrorID int
 
 type Error struct {
-	ID          ErrorID `json:"id,omitempty"`
-	Description string  `json:"description,omitempty"`
-	Cause       error   `json:"cause,omitempty"`
+	ID          ErrorID `json:"id"`
+	Description string  `json:"description"`
+	Cause       error   `json:"cause"`
 }
 
-func (err *Error) Error() string {
+func (err Error) Error() string {
 	return fmt.Sprintf("<%d> %s: %v", err.ID, err.Description, err.Cause)
+}
+
+func (err *Error) MarshalJSON() ([]byte, error) {
+	type ShadowError Error
+	type Default struct {
+		*ShadowError
+		CauseMsg string `json:"cause"`
+	}
+	type Nested struct {
+		*ShadowError
+		Cause Error `json:"cause"`
+	}
+
+	switch err.Cause.(type) {
+	case Error:
+		return json.Marshal(&Nested{
+			ShadowError: (*ShadowError)(err),
+			Cause:       err.Cause.(Error),
+		})
+	default:
+		return json.Marshal(&Default{
+			ShadowError: (*ShadowError)(err),
+			CauseMsg:    err.Cause.Error(),
+		})
+	}
 }
 
 var errorDescriptions = map[ErrorID]string{}

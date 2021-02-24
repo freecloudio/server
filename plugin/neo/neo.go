@@ -52,7 +52,11 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 			err = sessErr
 		}
 	}
-	return fcerror.NewError(fcerror.ErrIDDBCommitFailed, err)
+	if err != nil {
+		return fcerror.NewError(fcerror.ErrIDDBCommitFailed, err)
+	} else {
+		return nil
+	}
 }
 
 func (trCtx *transactionCtx) Rollback() *fcerror.Error {
@@ -164,10 +168,7 @@ func getDBFieldName(typeField reflect.StructField) *string {
 }
 
 func isNotFoundError(err error) bool {
-	if strings.Contains(err.Error(), "result contains no records") {
-		return true
-	}
-	return false
+	return strings.Contains(err.Error(), "result contains no records")
 }
 
 func neoToFcError(err error, notfound fcerror.ErrorID, other fcerror.ErrorID) *fcerror.Error {

@@ -1,18 +1,20 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type UserID int64
 
 type User struct {
-	ID      UserID    `json:"id,omitempty"`
-	Created time.Time `json:"created,omitempty"`
-	Updated time.Time `json:"updated,omitempty"`
+	ID      UserID    `json:"id" fc_neo:"-"`
+	Created time.Time `json:"created"`
+	Updated time.Time `json:"updated"`
 
-	FirstName string `json:"first_name,omitempty"`
-	LastName  string `json:"last_name,omitempty"`
-	Email     string `json:"email,omitempty"`
-	Password  string `json:"password,omitempty"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
 
-	IsAdmin bool `json:"is_admin,omitempty"`
+	IsAdmin bool `json:"is_admin"`
 }

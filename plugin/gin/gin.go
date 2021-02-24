@@ -45,6 +45,8 @@ func (r *Router) buildRoutes() {
 func errToStatus(fcerr *fcerror.Error) int {
 	switch fcerr.ID {
 	case fcerror.ErrIDUserNotFound:
+		return http.StatusNotFound
+	case fcerror.ErrBadRequest:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

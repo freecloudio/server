@@ -56,6 +56,11 @@ func (tx *userReadTransaction) GetUser(userID models.UserID) (user *models.User,
 
 	user = &models.User{}
 	err = recordToModel(record, "u", user)
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrIDModelConversionFailed, err)
+		return
+	}
+	user.ID = userID
 	return
 }
 
