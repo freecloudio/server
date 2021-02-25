@@ -52,8 +52,10 @@ func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.
 		return
 	}
 
-	user.Password, fcerr = utils.HashScrypt(user.Password)
-	if fcerr != nil {
+	var err error
+	user.Password, err = utils.HashScrypt(user.Password)
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrPasswordHashingFailed, err)
 		logrus.WithError(fcerr).Error("Failed to hash new user password")
 		return
 	}

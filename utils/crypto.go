@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/pkg/errors"
 
 	"golang.org/x/crypto/scrypt"
@@ -24,13 +23,12 @@ const (
 	ScryptHashID = "s1"
 )
 
-func HashScrypt(plaintext string) (hash string, fcerr *fcerror.Error) {
+func HashScrypt(plaintext string) (hash string, err error) {
 	passwordb := []byte(plaintext)
 	saltb := []byte(GenerateRandomString(saltLength))
 
 	hashb, err := scrypt.Key(passwordb, saltb, recommendedN, recommendedR, recommendedP, scryptHashLength)
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHasingFailed, err)
 		return
 	}
 
@@ -63,10 +61,10 @@ func ValidateScryptPassword(plaintext, hashed string) (valid bool, err error) {
 	return
 }
 
-func parseScryptStub(password string) (salt, hash []byte, N, r, p int, fcerr *fcerror.Error) {
+func parseScryptStub(password string) (salt, hash []byte, N, r, p int, err error) {
 	// First, do some cheap sanity checking
 	if len(password) < 10 || !strings.HasPrefix(password, fmt.Sprintf("$%s$", ScryptHashID)) {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.New("Too short or prefix missing"))
+		err = errors.New("Too short or prefix missing")
 		return
 	}
 
@@ -74,15 +72,15 @@ func parseScryptStub(password string) (salt, hash []byte, N, r, p int, fcerr *fc
 	parts := strings.Split(password[4:], "$")
 	// We need N, r, p, salt and the hash
 	if len(parts) < 5 {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.New("Not all expected parts could be found"))
+		err = errors.New("Not all expected parts could be found")
 		return
 	}
 
 	var n64, r64, p64 int64
 
-	n64, err := strconv.ParseInt(parts[0], 10, 0)
+	n64, err = strconv.ParseInt(parts[0], 10, 0)
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.Wrap(err, "could not parse scrypt N parameter"))
+		err = errors.Wrap(err, "could not parse scrypt N parameter")
 		return
 	}
 
@@ -90,7 +88,7 @@ func parseScryptStub(password string) (salt, hash []byte, N, r, p int, fcerr *fc
 
 	r64, err = strconv.ParseInt(parts[1], 10, 0)
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.Wrap(err, "could not parse scrypt r parameter"))
+		err = errors.Wrap(err, "could not parse scrypt r parameter")
 		return
 	}
 
@@ -98,7 +96,7 @@ func parseScryptStub(password string) (salt, hash []byte, N, r, p int, fcerr *fc
 
 	p64, err = strconv.ParseInt(parts[2], 10, 0)
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.Wrap(err, "could not parse scrypt p parameter"))
+		err = errors.Wrap(err, "could not parse scrypt p parameter")
 		return
 	}
 
@@ -106,13 +104,13 @@ func parseScryptStub(password string) (salt, hash []byte, N, r, p int, fcerr *fc
 
 	salt, err = base64.StdEncoding.DecodeString(parts[3])
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.Wrap(err, "could not parse scrypt salt"))
+		err = errors.Wrap(err, "could not parse scrypt salt")
 		return
 	}
 
 	hash, err = base64.StdEncoding.DecodeString(parts[4])
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrPasswordHashInvalid, errors.Wrap(err, "could not parse scrypt hash"))
+		err = errors.Wrap(err, "could not parse scrypt hash")
 		return
 	}
 	return
