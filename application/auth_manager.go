@@ -7,6 +7,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -89,17 +90,33 @@ func (mgr *authManager) GetUserByID(authCtx *authorization.Context, userID model
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
+	defer trans.Close()
+
 	user, fcerr = trans.GetUserByID(userID)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to get user")
 		return
 	}
+	user.Password = ""
+
 	return
 }
 
-func (mgr *authManager) VerifyToken(token models.TokenValue) (user *models.User, fcerr *fcerror.Error) {
-	// TODO
-	return mgr.GetUserByID(authorization.NewSystem(), models.UserID(0))
+func (mgr *authManager) VerifyToken(tokenValue models.TokenValue) (user *models.User, fcerr *fcerror.Error) {
+	authTrans, fcerr := mgr.authPersistence.StartReadTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+	defer authTrans.Close()
+
+	token, fcerr := authTrans.CheckToken(tokenValue)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Token not found or failed to verify")
+		return
+	}
+
+	return mgr.GetUserByID(authorization.NewSystem(), token.UserID)
 }
 
 func (mgr *authManager) createNewToken(userID models.UserID) (token *models.Token, fcerr *fcerror.Error) {

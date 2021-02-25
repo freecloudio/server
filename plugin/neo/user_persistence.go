@@ -108,16 +108,16 @@ func (tx *userReadWriteTransaction) SaveUser(user *models.User) (fcerr *fcerror.
 			"user": modelToMap(user),
 		}))
 	if err != nil {
-		fcerr = neoToFcError(err, fcerror.ErrUserNotFound, fcerror.ErrDBWriteFailed)
+		fcerr = neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 		return
 	}
 
-	userIDInt, ok := record.GetByIndex(0).(int64)
+	userIDInt, ok := record.Get("id")
 	if !ok {
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
 		return
 	}
-	user.ID = models.UserID(userIDInt)
+	user.ID = models.UserID(userIDInt.(int64))
 
 	return
 }

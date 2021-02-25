@@ -41,8 +41,13 @@ func markPluginUsed(persistencePluginKey config.PersistencePluginKey) {
 	pluginsUsed[persistencePluginKey] = struct{}{}
 }
 
+type ReadTransaction interface {
+	Close() *fcerror.Error
+}
+
 // ReadWriteTransaction stands for a transaction of any persistence plugin
 type ReadWriteTransaction interface {
+	ReadTransaction
 	Commit() *fcerror.Error
 	Rollback() *fcerror.Error
 }

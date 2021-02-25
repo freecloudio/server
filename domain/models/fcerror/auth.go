@@ -6,6 +6,7 @@ const (
 	ErrForbidden
 	ErrPasswordHashInvalid
 	ErrPasswordHasingFailed
+	ErrTokenNotFound
 )
 
 func init() {
@@ -14,4 +15,5 @@ func init() {
 	errorDescriptions[ErrForbidden] = "This action is forbidden"
 	errorDescriptions[ErrPasswordHashInvalid] = "Password hash in database not valid"
 	errorDescriptions[ErrPasswordHasingFailed] = "Failed to hash password"
+	errorDescriptions[ErrTokenNotFound] = "Token could not be found"
 }

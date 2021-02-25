@@ -15,8 +15,11 @@ import (
 const userIDParam = "user_id"
 
 func (r *Router) buildUserRoutes() {
-	r.engine.POST("/api/user/", r.registerUser)
-	r.engine.GET("/api/user/:"+userIDParam, r.getUserByID)
+	grp := r.engine.Group("/api/user")
+
+	grp.GET("", r.getOwnUser)
+	grp.POST("", r.registerUser)
+	grp.GET(":"+userIDParam, r.getUserByID)
 }
 
 func (r *Router) registerUser(c *gin.Context) {
@@ -37,6 +40,18 @@ func (r *Router) registerUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, token)
+}
+
+func (r *Router) getOwnUser(c *gin.Context) {
+	authContext := getAuthContext(c)
+
+	if authContext.User != nil {
+		c.JSON(http.StatusOK, authContext.User)
+		return
+	}
+
+	fcerr := fcerror.NewError(fcerror.ErrUnauthorized, nil)
+	c.JSON(errToStatus(fcerr), fcerr)
 }
 
 func (r *Router) getUserByID(c *gin.Context) {

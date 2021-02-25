@@ -14,6 +14,7 @@ type UserPersistenceController interface {
 }
 
 type UserPersistenceReadTransaction interface {
+	ReadTransaction
 	GetUserByID(userID models.UserID) (*models.User, *fcerror.Error)
 	GetUserByEmail(email string) (*models.User, *fcerror.Error)
 }

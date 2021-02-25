@@ -8,6 +8,7 @@ import (
 
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
+	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
@@ -38,6 +39,16 @@ type transactionCtx struct {
 	neoTx   neo4j.Transaction
 }
 
+func (trCtx *transactionCtx) Close() (fcerr *fcerror.Error) {
+	err := trCtx.session.Close()
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrDBCloseSessionFailed, err)
+		logrus.WithError(fcerr).Error("Failed to close neo4j session")
+		return
+	}
+	return
+}
+
 func (trCtx *transactionCtx) Commit() *fcerror.Error {
 	var err error
 	txErr := trCtx.neoTx.Commit()
@@ -47,7 +58,7 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 	}
 	sessErr := trCtx.session.Close()
 	if sessErr != nil {
-		logrus.WithError(sessErr).Error("Failed to close neo session")
+		logrus.WithError(sessErr).Error("Failed to close neo4j session")
 		if err == nil {
 			err = sessErr
 		}
@@ -140,7 +151,14 @@ func recordToModel(record neo4j.Record, key string, model interface{}) error {
 		if !ok {
 			continue
 		}
-		propVal := reflect.ValueOf(propInt)
+		var propVal reflect.Value
+		switch valField.Type() {
+		case reflect.TypeOf((models.TokenValue)("")):
+			propVal = reflect.ValueOf(models.TokenValue(propInt.(string)))
+		default:
+			propVal = reflect.ValueOf(propInt)
+		}
+
 		valField.Set(propVal)
 	}
 

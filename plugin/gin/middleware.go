@@ -43,7 +43,6 @@ func getAuthMiddleware(authMgr application.AuthManager) gin.HandlerFunc {
 			if fcerr == nil {
 				authContext = authorization.NewUser(user)
 			} else {
-				logrus.WithError(fcerr).Warn("Failed to verify token")
 				authContext = authorization.NewAnonymous()
 			}
 		}

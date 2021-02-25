@@ -1,6 +1,8 @@
 package neo
 
 import (
+	"fmt"
+
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
@@ -33,7 +35,7 @@ func (up *AuthPersistence) StartReadWriteTransaction() (tx persistence.AuthPersi
 		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		return
 	}
-	return &authReadWriteTransaction{txCtx}, nil
+	return &authReadWriteTransaction{authReadTransaction{txCtx}}, nil
 }
 
 type authReadTransaction struct {
@@ -41,12 +43,40 @@ type authReadTransaction struct {
 }
 
 func (tx *authReadTransaction) CheckToken(tokenValue models.TokenValue) (token *models.Token, fcerr *fcerror.Error) {
-	// TODO
+	record, err := neo4j.Single(tx.neoTx.Run(`
+		MATCH (t:Token)<-[:AUTHENTICATES_WITH]-(u:User)
+		WHERE t.value = $token_value
+		RETURN t, ID(u) as user_id
+		`,
+		map[string]interface{}{
+			"token_value": string(tokenValue),
+		}))
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrTokenNotFound, fcerror.ErrDBReadFailed)
+		return
+	}
+
+	token = &models.Token{}
+	err = recordToModel(record, "t", token)
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, err)
+		return
+	}
+
+	userIDInt, ok := record.Get("user_id")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
+		return
+	}
+	token.UserID = models.UserID(userIDInt.(int64))
+
+	tx.neoTx.Close()
+
 	return
 }
 
 type authReadWriteTransaction struct {
-	*transactionCtx
+	authReadTransaction
 }
 
 func (tx *authReadWriteTransaction) SaveToken(token *models.Token) *fcerror.Error {
@@ -59,5 +89,5 @@ func (tx *authReadWriteTransaction) SaveToken(token *models.Token) *fcerror.Erro
 			"t": modelToMap(token),
 		})
 
-	return neoToFcError(err, fcerror.ErrUserNotFound, fcerror.ErrDBWriteFailed)
+	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 }

@@ -14,11 +14,13 @@ type AuthPersistenceController interface {
 }
 
 type AuthPersistenceReadTransaction interface {
+	ReadTransaction
 	CheckToken(tokenValue models.TokenValue) (*models.Token, *fcerror.Error)
 }
 
 type AuthPersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
+	AuthPersistenceReadTransaction
 	SaveToken(token *models.Token) *fcerror.Error
 }
 
