@@ -36,6 +36,7 @@ func (r *Router) Serve(addr string) {
 }
 
 func (r *Router) buildRoutes() {
+	r.buildAuthRoutes()
 	r.buildUserRoutes()
 
 	r.engine.GET("/health", func(c *gin.Context) {

@@ -22,6 +22,7 @@ type AuthPersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
 	AuthPersistenceReadTransaction
 	SaveToken(token *models.Token) *fcerror.Error
+	DeleteToken(tokenValue models.TokenValue) *fcerror.Error
 }
 
 var authPersistenceController = map[config.PersistencePluginKey]AuthPersistenceController{}

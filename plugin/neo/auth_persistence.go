@@ -91,3 +91,16 @@ func (tx *authReadWriteTransaction) SaveToken(token *models.Token) *fcerror.Erro
 
 	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 }
+
+func (tx *authReadWriteTransaction) DeleteToken(tokenValue models.TokenValue) *fcerror.Error {
+	_, err := tx.neoTx.Run(`
+		MATCH (t:Token)
+		WHERE t.value = $token_value
+		DETACH DELETE t
+		`,
+		map[string]interface{}{
+			"token_value": string(tokenValue),
+		})
+
+	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
+}

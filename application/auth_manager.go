@@ -13,6 +13,8 @@ import (
 
 // AuthManager contains all use cases related to authentication and user management
 type AuthManager interface {
+	Login(email, password string) (*models.Token, *fcerror.Error)
+	Logout(tokenValue models.TokenValue) *fcerror.Error
 	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Token, *fcerror.Error)
 	GetUserByID(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
 	VerifyToken(token models.TokenValue) (*models.User, *fcerror.Error)
@@ -33,6 +35,59 @@ type authManager struct {
 }
 
 // TODO: Session cleanup
+
+func (mgr *authManager) Login(email, password string) (token *models.Token, fcerr *fcerror.Error) {
+	trans, fcerr := mgr.userPersistence.StartReadTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+	defer trans.Close()
+
+	user, fcerr := trans.GetUserByEmail(email)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
+		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
+		return
+	}
+
+	valid, err := utils.ValidateScryptPassword(password, user.Password)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to validate password")
+		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
+		return
+	}
+
+	if !valid {
+		logrus.WithError(fcerr).WithField("email", email).Warn("Unsuccessful login attempt for user")
+		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
+		return
+	}
+
+	return mgr.createNewToken(user.ID)
+}
+
+func (mgr *authManager) Logout(tokenValue models.TokenValue) (fcerr *fcerror.Error) {
+	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+
+	fcerr = trans.DeleteToken(tokenValue)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to delete token")
+		return
+	}
+
+	fcerr = trans.Commit()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to commit transaction")
+		return
+	}
+
+	return
+}
 
 func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.User) (token *models.Token, fcerr *fcerror.Error) {
 	// TODO: Input Validation
