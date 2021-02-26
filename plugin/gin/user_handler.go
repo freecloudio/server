@@ -37,6 +37,7 @@ func (r *Router) registerUser(c *gin.Context) {
 	token, fcerr := r.authMgr.CreateUser(authContext, user)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
+		return
 	}
 
 	c.JSON(http.StatusCreated, token)

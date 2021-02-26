@@ -14,8 +14,9 @@ const (
 	keyUserPersistencePlugin = "persistence.user.plugin"
 	keyAuthPersistencePlugin = "persistence.auth.plugin"
 
-	keyAuthTokenValueLength = "auth.token.length"
-	keyAuthTokenExpiration  = "auth.token.expiration"
+	keyAuthSessionTokenLength     = "auth.session.token.length"
+	keyAuthSessionExpiration      = "auth.session.expiration"
+	keyAuthSessionCleanupInterval = "auth.session.cleanup.interval"
 )
 
 type ViperConfig struct {
@@ -29,8 +30,9 @@ func InitViperConfig() *ViperConfig {
 	p.String(keyUserPersistencePlugin, string(config.NeoPersistenceKey), "Key of the persistence plugin to use for user management")
 	p.String(keyAuthPersistencePlugin, string(config.NeoPersistenceKey), "Key of the persistence plugin to use for auth management")
 
-	p.Int(keyAuthTokenValueLength, 32, "Length of the token used for authentication")
-	p.Int(keyAuthTokenExpiration, 24, "Time a token is valid in hours")
+	p.Int(keyAuthSessionTokenLength, 32, "Length of the token used for authentication")
+	p.Int(keyAuthSessionExpiration, 24, "Time a session is valid in hours")
+	p.Int(keyAuthSessionCleanupInterval, 1, "Interval in which expired sessions will be cleaned in hours")
 
 	p.Parse(os.Args[1:])
 	v.BindPFlags(p)
@@ -56,10 +58,14 @@ func (cfg *ViperConfig) GetAuthPersistencePluginKey() config.PersistencePluginKe
 	return config.PersistencePluginKey(cfg.viper.GetString(keyAuthPersistencePlugin))
 }
 
-func (cfg *ViperConfig) GetTokenValueLength() int {
-	return cfg.viper.GetInt(keyAuthTokenValueLength)
+func (cfg *ViperConfig) GetSessionTokenLength() int {
+	return cfg.viper.GetInt(keyAuthSessionTokenLength)
 }
 
-func (cfg *ViperConfig) GetTokenExpirationDuration() time.Duration {
-	return time.Duration(cfg.viper.GetInt(keyAuthTokenValueLength)) * time.Hour
+func (cfg *ViperConfig) GetSessionExpirationDuration() time.Duration {
+	return time.Duration(cfg.viper.GetInt(keyAuthSessionExpiration)) * time.Hour
+}
+
+func (cfg *ViperConfig) GetSessionCleanupInterval() time.Duration {
+	return time.Duration(cfg.viper.GetInt(keyAuthSessionCleanupInterval)) * time.Hour
 }

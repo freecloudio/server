@@ -105,21 +105,15 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 	}
 }
 
-func (trCtx *transactionCtx) Rollback() *fcerror.Error {
-	var err error
-	txErr := trCtx.neoTx.Rollback()
-	if txErr != nil {
-		logrus.WithError(txErr).Error("Failed to rollback neo transaction - close session anyway")
-		err = txErr
+func (trCtx *transactionCtx) Rollback() {
+	err := trCtx.neoTx.Rollback()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to rollback neo transaction - close session anyway")
 	}
-	sessErr := trCtx.session.Close()
-	if sessErr != nil {
-		logrus.WithError(sessErr).Error("Failed to close neo session")
-		if err == nil {
-			err = sessErr
-		}
+	err = trCtx.session.Close()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to close neo session")
 	}
-	return fcerror.NewError(fcerror.ErrDBRollbackFailed, err)
 }
 
 func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, fcerr *fcerror.Error) {
@@ -289,8 +283,8 @@ func recordToModel(record neo4j.Record, key string, model interface{}) error {
 		}
 		var propVal reflect.Value
 		switch valField.Type() {
-		case reflect.TypeOf((models.TokenValue)("")):
-			propVal = reflect.ValueOf(models.TokenValue(propInt.(string)))
+		case reflect.TypeOf((models.Token)("")):
+			propVal = reflect.ValueOf(models.Token(propInt.(string)))
 		default:
 			propVal = reflect.ValueOf(propInt)
 		}
@@ -308,7 +302,9 @@ func getDBFieldName(typeField reflect.StructField) *string {
 	var fieldTag string
 	if fcNeoFieldTag := typeField.Tag.Get("fc_neo"); fcNeoFieldTag != "" {
 		fieldTag = strings.Split(fcNeoFieldTag, ",")[0]
-	} else {
+	}
+
+	if fieldTag == "" {
 		fieldTag = strings.Split(typeField.Tag.Get("json"), ",")[0]
 	}
 

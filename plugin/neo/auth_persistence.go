@@ -14,7 +14,7 @@ import (
 
 func init() {
 	persistence.RegisterAuthPersistenceController(config.NeoPersistenceKey, &AuthPersistence{})
-	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "Token", model: &models.Token{}})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "Session", model: &models.Session{}})
 }
 
 type AuthPersistence struct{}
@@ -41,22 +41,22 @@ type authReadTransaction struct {
 	*transactionCtx
 }
 
-func (tx *authReadTransaction) CheckToken(tokenValue models.TokenValue) (token *models.Token, fcerr *fcerror.Error) {
+func (tx *authReadTransaction) GetSessionByToken(token models.Token) (session *models.Session, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-		MATCH (t:Token)<-[:AUTHENTICATES_WITH]-(u:User)
-		WHERE t.value = $token_value
-		RETURN t, ID(u) as user_id
+		MATCH (s:Session)<-[:AUTHENTICATES_WITH]-(u:User)
+		WHERE s.token = $token
+		RETURN s, ID(u) as user_id
 		`,
 		map[string]interface{}{
-			"token_value": string(tokenValue),
+			"token": string(token),
 		}))
 	if err != nil {
 		fcerr = neoToFcError(err, fcerror.ErrTokenNotFound, fcerror.ErrDBReadFailed)
 		return
 	}
 
-	token = &models.Token{}
-	err = recordToModel(record, "t", token)
+	session = &models.Session{}
+	err = recordToModel(record, "s", session)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, err)
 		return
@@ -67,7 +67,7 @@ func (tx *authReadTransaction) CheckToken(tokenValue models.TokenValue) (token *
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
 		return
 	}
-	token.UserID = models.UserID(userIDInt.(int64))
+	session.UserID = models.UserID(userIDInt.(int64))
 
 	tx.neoTx.Close()
 
@@ -78,28 +78,33 @@ type authReadWriteTransaction struct {
 	authReadTransaction
 }
 
-func (tx *authReadWriteTransaction) SaveToken(token *models.Token) *fcerror.Error {
+func (tx *authReadWriteTransaction) SaveSession(session *models.Session) *fcerror.Error {
 	_, err := tx.neoTx.Run(`
 		MATCH (u:User)
-		WHERE ID(u) = $t.user_id
-		CREATE (u)-[a:AUTHENTICATES_WITH]->(t:Token { value: $t.value, valid_until: $t.valid_until })
+		WHERE ID(u) = $user_id
+		CREATE (u)-[a:AUTHENTICATES_WITH]->(s:Session $s)
 		`,
 		map[string]interface{}{
-			"t": modelToMap(token),
+			"user_id": session.UserID,
+			"s":       modelToMap(session),
 		})
 
 	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 }
 
-func (tx *authReadWriteTransaction) DeleteToken(tokenValue models.TokenValue) *fcerror.Error {
+func (tx *authReadWriteTransaction) DeleteSessionByToken(token models.Token) *fcerror.Error {
 	_, err := tx.neoTx.Run(`
-		MATCH (t:Token)
-		WHERE t.value = $token_value
-		DETACH DELETE t
+		MATCH (s:Session)
+		WHERE s.token = $token
+		DETACH DELETE s
 		`,
 		map[string]interface{}{
-			"token_value": string(tokenValue),
+			"token": string(token),
 		})
 
 	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
+}
+
+func (tx *authReadWriteTransaction) DeleteExpiredSessions() *fcerror.Error {
+	return nil // TODO
 }

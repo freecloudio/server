@@ -15,14 +15,15 @@ type AuthPersistenceController interface {
 
 type AuthPersistenceReadTransaction interface {
 	ReadTransaction
-	CheckToken(tokenValue models.TokenValue) (*models.Token, *fcerror.Error)
+	GetSessionByToken(token models.Token) (*models.Session, *fcerror.Error)
 }
 
 type AuthPersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
 	AuthPersistenceReadTransaction
-	SaveToken(token *models.Token) *fcerror.Error
-	DeleteToken(tokenValue models.TokenValue) *fcerror.Error
+	SaveSession(session *models.Session) *fcerror.Error
+	DeleteSessionByToken(token models.Token) *fcerror.Error
+	DeleteExpiredSessions() *fcerror.Error
 }
 
 var authPersistenceController = map[config.PersistencePluginKey]AuthPersistenceController{}

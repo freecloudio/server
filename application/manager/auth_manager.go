@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"time"
+
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
@@ -13,11 +15,11 @@ import (
 
 // AuthManager contains all use cases related to authentication and user management
 type AuthManager interface {
-	Login(email, password string) (*models.Token, *fcerror.Error)
-	Logout(tokenValue models.TokenValue) *fcerror.Error
-	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Token, *fcerror.Error)
+	Login(email, password string) (*models.Session, *fcerror.Error)
+	Logout(token models.Token) *fcerror.Error
+	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Session, *fcerror.Error)
 	GetUserByID(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
-	VerifyToken(token models.TokenValue) (*models.User, *fcerror.Error)
+	VerifyToken(token models.Token) (*models.User, *fcerror.Error)
 }
 
 func NewAuthManager(cfg config.Config) AuthManager {
@@ -25,6 +27,7 @@ func NewAuthManager(cfg config.Config) AuthManager {
 		cfg:             cfg,
 		userPersistence: persistence.GetUserPersistenceController(cfg),
 		authPersistence: persistence.GetAuthPersistenceController(cfg),
+		done:            make(chan struct{}),
 	}
 }
 
@@ -32,11 +35,53 @@ type authManager struct {
 	cfg             config.Config
 	userPersistence persistence.UserPersistenceController
 	authPersistence persistence.AuthPersistenceController
+	done            chan struct{}
 }
 
-// TODO: Session cleanup
+func (mgr *authManager) Close() {
+	mgr.done <- struct{}{}
+}
 
-func (mgr *authManager) Login(email, password string) (token *models.Token, fcerr *fcerror.Error) {
+func (mgr *authManager) cleanupExpiredSessionsRoutine() {
+	interval := mgr.cfg.GetSessionCleanupInterval()
+	logrus.WithField("interval", interval).Trace("Starting session cleanup")
+
+	mgr.cleanupExpiredSessions()
+	ticker := time.NewTicker(interval)
+	for {
+		select {
+		case <-mgr.done:
+			return
+		case <-ticker.C:
+			mgr.cleanupExpiredSessions()
+		}
+	}
+}
+
+func (mgr *authManager) cleanupExpiredSessions() {
+	logrus.Trace("Cleaning expired sessions")
+
+	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+
+	fcerr = trans.DeleteExpiredSessions()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to delete expired sessions")
+		trans.Rollback()
+		return
+	}
+
+	fcerr = trans.Commit()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to commit transaction")
+		return
+	}
+}
+
+func (mgr *authManager) Login(email, password string) (token *models.Session, fcerr *fcerror.Error) {
 	trans, fcerr := mgr.userPersistence.StartReadTransaction()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
@@ -64,19 +109,20 @@ func (mgr *authManager) Login(email, password string) (token *models.Token, fcer
 		return
 	}
 
-	return mgr.createNewToken(user.ID)
+	return mgr.createNewSession(user.ID)
 }
 
-func (mgr *authManager) Logout(tokenValue models.TokenValue) (fcerr *fcerror.Error) {
+func (mgr *authManager) Logout(token models.Token) (fcerr *fcerror.Error) {
 	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 
-	fcerr = trans.DeleteToken(tokenValue)
+	fcerr = trans.DeleteSessionByToken(token)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to delete token")
+		trans.Rollback()
 		return
 	}
 
@@ -89,7 +135,7 @@ func (mgr *authManager) Logout(tokenValue models.TokenValue) (fcerr *fcerror.Err
 	return
 }
 
-func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.User) (token *models.Token, fcerr *fcerror.Error) {
+func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.User) (token *models.Session, fcerr *fcerror.Error) {
 	// TODO: Input Validation
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
@@ -101,9 +147,11 @@ func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.
 	existingUser, fcerr := trans.GetUserByEmail(user.Email)
 	if fcerr != nil && fcerr.ID != fcerror.ErrUserNotFound {
 		logrus.WithError(fcerr).Error("Could not verify if user with this email already exists")
+		trans.Rollback()
 		return
 	} else if fcerr == nil && existingUser != nil {
-		fcerr = fcerror.NewError(fcerror.ErrUserNotFound, nil)
+		fcerr = fcerror.NewError(fcerror.ErrEmailAlreadyRegistered, nil)
+		trans.Rollback()
 		return
 	}
 
@@ -133,7 +181,7 @@ func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.
 		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
-	return mgr.createNewToken(user.ID)
+	return mgr.createNewSession(user.ID)
 }
 
 func (mgr *authManager) GetUserByID(authCtx *authorization.Context, userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
@@ -159,7 +207,7 @@ func (mgr *authManager) GetUserByID(authCtx *authorization.Context, userID model
 	return
 }
 
-func (mgr *authManager) VerifyToken(tokenValue models.TokenValue) (user *models.User, fcerr *fcerror.Error) {
+func (mgr *authManager) VerifyToken(token models.Token) (user *models.User, fcerr *fcerror.Error) {
 	authTrans, fcerr := mgr.authPersistence.StartReadTransaction()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
@@ -167,19 +215,24 @@ func (mgr *authManager) VerifyToken(tokenValue models.TokenValue) (user *models.
 	}
 	defer authTrans.Close()
 
-	token, fcerr := authTrans.CheckToken(tokenValue)
+	session, fcerr := authTrans.GetSessionByToken(token)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Token not found or failed to verify")
 		return
 	}
 
-	return mgr.GetUserByID(authorization.NewSystem(), token.UserID)
+	if time.Now().After(session.ValidUntil) {
+		fcerr = fcerror.NewError(fcerror.ErrSessionExpired, nil)
+		return
+	}
+
+	return mgr.GetUserByID(authorization.NewSystem(), session.UserID)
 }
 
-func (mgr *authManager) createNewToken(userID models.UserID) (token *models.Token, fcerr *fcerror.Error) {
-	token = &models.Token{
-		Value:      models.TokenValue(utils.GenerateRandomString(mgr.cfg.GetTokenValueLength())),
-		ValidUntil: utils.GetTimeIn(mgr.cfg.GetTokenExpirationDuration()),
+func (mgr *authManager) createNewSession(userID models.UserID) (session *models.Session, fcerr *fcerror.Error) {
+	session = &models.Session{
+		Token:      models.Token(utils.GenerateRandomString(mgr.cfg.GetSessionTokenLength())),
+		ValidUntil: utils.GetTimeIn(mgr.cfg.GetSessionExpirationDuration()),
 		UserID:     userID,
 	}
 
@@ -188,7 +241,7 @@ func (mgr *authManager) createNewToken(userID models.UserID) (token *models.Toke
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
-	fcerr = trans.SaveToken(token)
+	fcerr = trans.SaveSession(session)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to save user")
 		trans.Rollback()
@@ -199,5 +252,5 @@ func (mgr *authManager) createNewToken(userID models.UserID) (token *models.Toke
 		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
-	return token, nil
+	return session, nil
 }

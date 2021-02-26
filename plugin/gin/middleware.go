@@ -39,7 +39,7 @@ func getAuthMiddleware(authMgr manager.AuthManager) gin.HandlerFunc {
 		if len(authHeader) <= len(authPrefix) {
 			authContext = authorization.NewAnonymous()
 		} else {
-			tokenString := models.TokenValue(authHeader[len(authPrefix):])
+			tokenString := models.Token(authHeader[len(authPrefix):])
 			user, fcerr := authMgr.VerifyToken(tokenString)
 			if fcerr == nil {
 				authContext = authorization.NewUser(user)

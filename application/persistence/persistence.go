@@ -70,5 +70,5 @@ type ReadTransaction interface {
 type ReadWriteTransaction interface {
 	ReadTransaction
 	Commit() *fcerror.Error
-	Rollback() *fcerror.Error
+	Rollback()
 }

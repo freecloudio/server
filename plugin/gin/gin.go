@@ -61,7 +61,7 @@ func errToStatus(fcerr *fcerror.Error) int {
 		return http.StatusForbidden
 	case fcerror.ErrUserNotFound:
 		return http.StatusNotFound
-	case fcerror.ErrBadRequest:
+	case fcerror.ErrBadRequest, fcerror.ErrEmailAlreadyRegistered:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

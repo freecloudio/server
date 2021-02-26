@@ -40,9 +40,9 @@ func (r *Router) logout(c *gin.Context) {
 	authContext := getAuthContext(c)
 
 	var fcerr *fcerror.Error
-	if tokenValueInt, ok := c.Get(authTokenKey); authContext.Type == authorization.ContextTypeUser && ok {
-		tokenValue := tokenValueInt.(models.TokenValue)
-		fcerr = r.authMgr.Logout(tokenValue)
+	if tokenInt, ok := c.Get(authTokenKey); authContext.Type == authorization.ContextTypeUser && ok {
+		token := tokenInt.(models.Token)
+		fcerr = r.authMgr.Logout(token)
 	} else {
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
 	}

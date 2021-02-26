@@ -11,6 +11,7 @@ const (
 type Config interface {
 	GetUserPersistencePluginKey() PersistencePluginKey
 	GetAuthPersistencePluginKey() PersistencePluginKey
-	GetTokenValueLength() int
-	GetTokenExpirationDuration() time.Duration
+	GetSessionTokenLength() int
+	GetSessionExpirationDuration() time.Duration
+	GetSessionCleanupInterval() time.Duration
 }
