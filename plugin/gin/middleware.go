@@ -1,8 +1,8 @@
 package gin
 
 import (
-	"github.com/freecloudio/server/application"
 	"github.com/freecloudio/server/application/authorization"
+	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/sirupsen/logrus"
 
@@ -31,7 +31,7 @@ func getAuthContext(c *gin.Context) *authorization.Context {
 	return authContext
 }
 
-func getAuthMiddleware(authMgr application.AuthManager) gin.HandlerFunc {
+func getAuthMiddleware(authMgr manager.AuthManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authContext *authorization.Context
 

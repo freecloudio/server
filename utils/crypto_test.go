@@ -6,23 +6,25 @@ import (
 
 func TestParseScryptStub(t *testing.T) {
 	type data struct {
-		Name     string
-		Password string
-		Error    error
+		Name        string
+		Password    string
+		ShouldError bool
 	}
 
 	var testdata = []data{
-		{"empty password", "", ErrInvalidScryptStub},
-		{"only preemble", "$s1$", ErrInvalidScryptStub},
-		{"wrong preemble", "$s3$16384$8$1$SaltString$Base64Password=", ErrInvalidScryptStub},
-		{"missing parts", "$s1$16384$8$1$", ErrInvalidScryptStub},
-		{"valid password", "$s1$16384$8$1$VmFsaWRTYWx0$VmFsaWRQYXNzd29yZA0K", nil},
+		{"empty password", "", true},
+		{"only preemble", "$s1$", true},
+		{"wrong preemble", "$s3$16384$8$1$SaltString$Base64Password=", true},
+		{"missing parts", "$s1$16384$8$1$", true},
+		{"valid password", "$s1$16384$8$1$VmFsaWRTYWx0$VmFsaWRQYXNzd29yZA0K", false},
 	}
 
 	for _, td := range testdata {
 		_, _, _, _, _, err := parseScryptStub(td.Password)
-		if err != td.Error {
-			t.Errorf("Expected %v for %s, got: %v", td.Error, td.Name, err)
+		if err == nil && td.ShouldError {
+			t.Errorf("Expected error for %s but got none", td.Name)
+		} else if err != nil && !td.ShouldError {
+			t.Errorf("Expected no error for %s but got: %v", td.Name, err)
 		}
 	}
 

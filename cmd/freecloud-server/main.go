@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/freecloudio/server/application"
+	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/application/persistence"
 
 	"github.com/freecloudio/server/plugin/gin"
@@ -14,7 +14,7 @@ func main() {
 
 	cfg := viperplg.InitViperConfig()
 
-	authMgr := application.NewAuthManager(cfg)
+	authMgr := manager.NewAuthManager(cfg)
 
 	router := gin.NewRouter(authMgr)
 	router.Serve(":8080")

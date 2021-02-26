@@ -3,7 +3,7 @@ package gin
 import (
 	"net/http"
 
-	"github.com/freecloudio/server/application"
+	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -13,10 +13,10 @@ import (
 type Router struct {
 	engine *gin.Engine
 
-	authMgr application.AuthManager
+	authMgr manager.AuthManager
 }
 
-func NewRouter(authMgr application.AuthManager) (router *Router) {
+func NewRouter(authMgr manager.AuthManager) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
