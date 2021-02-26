@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
@@ -40,11 +41,17 @@ const (
 )
 
 func InitializeNeo() (fcerr *fcerror.Error) {
-	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), noEncrypted)
+	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), setConfig)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBInitializationFailed, err)
 		return
 	}
+	err = driver.VerifyConnectivity()
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrDBUnavailable, err)
+		return
+	}
+
 	neo = driver
 
 	fcerr = initializeConstraintsAndIndexes()
@@ -65,8 +72,9 @@ func CloseNeo() (fcerr *fcerror.Error) {
 	return
 }
 
-func noEncrypted(config *neo4j.Config) {
+func setConfig(config *neo4j.Config) {
 	config.Encrypted = false
+	config.Log = neo4j.ConsoleLogger(neo4j.WARNING)
 }
 
 type transactionCtx struct {
@@ -117,12 +125,12 @@ func (trCtx *transactionCtx) Rollback() {
 }
 
 func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, fcerr *fcerror.Error) {
-	session, err := neo.NewSession(neo4j.SessionConfig{AccessMode: accessMode})
+	session, err := neo.Session(accessMode)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		return
 	}
-	neoTx, err := session.BeginTransaction()
+	neoTx, err := session.BeginTransaction(neo4j.WithTxTimeout(10 * time.Second))
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		session.Close()

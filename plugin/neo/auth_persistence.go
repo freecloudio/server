@@ -7,6 +7,7 @@ import (
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
@@ -79,7 +80,7 @@ type authReadWriteTransaction struct {
 }
 
 func (tx *authReadWriteTransaction) SaveSession(session *models.Session) *fcerror.Error {
-	_, err := tx.neoTx.Run(`
+	res, err := tx.neoTx.Run(`
 		MATCH (u:User)
 		WHERE ID(u) = $user_id
 		CREATE (u)-[a:AUTHENTICATES_WITH]->(s:Session $s)
@@ -88,12 +89,15 @@ func (tx *authReadWriteTransaction) SaveSession(session *models.Session) *fcerro
 			"user_id": session.UserID,
 			"s":       modelToMap(session),
 		})
+	if err == nil {
+		_, err = res.Consume()
+	}
 
 	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 }
 
 func (tx *authReadWriteTransaction) DeleteSessionByToken(token models.Token) *fcerror.Error {
-	_, err := tx.neoTx.Run(`
+	res, err := tx.neoTx.Run(`
 		MATCH (s:Session)
 		WHERE s.token = $token
 		DETACH DELETE s
@@ -101,10 +105,25 @@ func (tx *authReadWriteTransaction) DeleteSessionByToken(token models.Token) *fc
 		map[string]interface{}{
 			"token": string(token),
 		})
+	if err == nil {
+		_, err = res.Consume()
+	}
 
 	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 }
 
 func (tx *authReadWriteTransaction) DeleteExpiredSessions() *fcerror.Error {
-	return nil // TODO
+	res, err := tx.neoTx.Run(`
+		MATCH (s:Session)
+		WHERE s.valid_until < $now
+		DETACH DELETE s
+		`,
+		map[string]interface{}{
+			"now": utils.GetCurrentTime(),
+		})
+	if err == nil {
+		_, err = res.Consume()
+	}
+
+	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 }

@@ -23,12 +23,15 @@ type AuthManager interface {
 }
 
 func NewAuthManager(cfg config.Config) AuthManager {
-	return &authManager{
+	authMgr := &authManager{
 		cfg:             cfg,
 		userPersistence: persistence.GetUserPersistenceController(cfg),
 		authPersistence: persistence.GetAuthPersistenceController(cfg),
 		done:            make(chan struct{}),
 	}
+	go authMgr.cleanupExpiredSessionsRoutine()
+
+	return authMgr
 }
 
 type authManager struct {
