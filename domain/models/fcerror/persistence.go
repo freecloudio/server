@@ -9,6 +9,8 @@ const (
 	ErrDBAuthentication
 	ErrDBUnavailable
 	ErrDBCloseSessionFailed
+	ErrDBInitializationFailed
+	ErrDBCloseFailed
 )
 
 func init() {
@@ -20,4 +22,6 @@ func init() {
 	errorDescriptions[ErrDBAuthentication] = "Failed to authenticate to the DB"
 	errorDescriptions[ErrDBUnavailable] = "Database is unavailable"
 	errorDescriptions[ErrDBCloseSessionFailed] = "Failed to close database session"
+	errorDescriptions[ErrDBInitializationFailed] = "Failed to initialize database connection"
+	errorDescriptions[ErrDBCloseFailed] = "Failed to close database connection"
 }

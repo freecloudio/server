@@ -16,7 +16,10 @@ import (
 )
 
 func init() {
-	persistence.RegisterPluginInitialization(config.NeoPersistenceKey, InitializeNeo)
+	persistence.RegisterPluginInitialization(config.NeoPersistenceKey, persistence.PluginLifecycleFuncs{
+		InitializationFunc: InitializeNeo,
+		CloseFunc:          CloseNeo,
+	})
 }
 
 var neo neo4j.Driver
@@ -28,19 +31,29 @@ const (
 	NeoEditionCommunity
 )
 
-func InitializeNeo() (err error) {
+func InitializeNeo() (fcerr *fcerror.Error) {
 	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), noEncrypted)
 	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrDBInitializationFailed, err)
 		return
 	}
 	neo = driver
 
-	fcerr := initializeConstraintsAndIndexes()
+	fcerr = initializeConstraintsAndIndexes()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to initialize neo constraints - continue without")
 		fcerr = nil
 	}
 
+	return
+}
+
+func CloseNeo() (fcerr *fcerror.Error) {
+	err := neo.Close()
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrDBCloseFailed, nil)
+		return
+	}
 	return
 }
 

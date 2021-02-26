@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/freecloudio/server/application/manager"
@@ -11,12 +12,12 @@ import (
 )
 
 type Router struct {
-	engine *gin.Engine
-
+	engine  *gin.Engine
 	authMgr manager.AuthManager
+	srv     *http.Server
 }
 
-func NewRouter(authMgr manager.AuthManager) (router *Router) {
+func NewRouter(authMgr manager.AuthManager, addr string) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
@@ -25,14 +26,22 @@ func NewRouter(authMgr manager.AuthManager) (router *Router) {
 	router = &Router{
 		engine:  ginRouter,
 		authMgr: authMgr,
+		srv: &http.Server{
+			Addr:    ":8080",
+			Handler: ginRouter,
+		},
 	}
 	router.buildRoutes()
 
 	return
 }
 
-func (r *Router) Serve(addr string) {
-	r.engine.Run(addr)
+func (r *Router) Serve() error {
+	return r.srv.ListenAndServe()
+}
+
+func (r *Router) Shutdown(ctx context.Context) error {
+	return r.srv.Shutdown(ctx)
 }
 
 func (r *Router) buildRoutes() {
