@@ -210,7 +210,10 @@ func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, proper
 	}
 
 	name := buildConfigName(variantName, label, property)
-	_, err := txCtx.neoTx.Run(fmt.Sprintf(query, name, label, property), nil)
+	res, err := txCtx.neoTx.Run(fmt.Sprintf(query, name, label, property), nil)
+	if res == nil {
+		_, err = res.Consume()
+	}
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{"variant": variantName, "label": label, "property": property}).Error("Failed to create constraint")
 	}
