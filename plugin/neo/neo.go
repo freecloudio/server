@@ -31,6 +31,14 @@ const (
 	NeoEditionCommunity
 )
 
+type NeoConfigVariant int
+
+const (
+	NeoConfigUniqueConstraint = iota
+	NeoConfigPropertyConstraint
+	NeoConfigIndex
+)
+
 func InitializeNeo() (fcerr *fcerror.Error) {
 	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), noEncrypted)
 	if err != nil {
@@ -162,13 +170,13 @@ func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 			}
 
 			if isUniqueField(typeField) {
-				insertUniqueConstraint(txCtx, constraint.label, *dbNamePtr)
+				insertConfig(txCtx, NeoConfigUniqueConstraint, constraint.label, *dbNamePtr)
 			}
 			if isIndexField(typeField) {
-				insertIndex(txCtx, constraint.label, *dbNamePtr)
+				insertConfig(txCtx, NeoConfigIndex, constraint.label, *dbNamePtr)
 			}
 			if neoEdition == NeoEditionEnterprise && !isOptionalField(typeField) {
-				insertExistsConstraint(txCtx, constraint.label, *dbNamePtr)
+				insertConfig(txCtx, NeoConfigPropertyConstraint, constraint.label, *dbNamePtr)
 			}
 		}
 	}
@@ -177,27 +185,32 @@ func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 	return
 }
 
-func insertUniqueConstraint(txCtx *transactionCtx, label, property string) {
-	uniqueQuery := "CREATE CONSTRAINT IF NOT EXISTS ON (n:%s) ASSERT n.%s IS UNIQUE"
-	_, err := txCtx.neoTx.Run(fmt.Sprintf(uniqueQuery, label, property), nil)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to create constraint")
-	}
+func buildConfigName(variant, label, property string) string {
+	return fmt.Sprintf("%s_%s_%s", variant, label, property)
 }
 
-func insertIndex(txCtx *transactionCtx, label, property string) {
-	indexQuery := "CREATE INDEX IF NOT EXISTS FOR (n:%s) ON (n.%s)"
-	_, err := txCtx.neoTx.Run(fmt.Sprintf(indexQuery, label, property), nil)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to create index")
+func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, property string) {
+	var query string
+	var variantName string
+	switch variant {
+	case NeoConfigUniqueConstraint:
+		query = "CREATE CONSTRAINT %s IF NOT EXISTS ON (n:%s) ASSERT n.%s IS UNIQUE"
+		variantName = "unique"
+	case NeoConfigPropertyConstraint:
+		query = "CREATE CONSTRAINT %s IF NOT EXISTS ON (n:%s) ASSERT EXISTS (n.%s)"
+		variantName = "property"
+	case NeoConfigIndex:
+		query = "CREATE INDEX %s IF NOT EXISTS FOR (n:%s) ON (n.%s)"
+		variantName = "index"
+	default:
+		logrus.WithField("variant", variant).Error("Unknown neo config variant")
+		return
 	}
-}
 
-func insertExistsConstraint(txCtx *transactionCtx, label, property string) {
-	existsQuery := "CREATE CONSTRAINT IF NOT EXISTS ON (n:%s) ASSERT EXISTS (n.%s)"
-	_, err := txCtx.neoTx.Run(fmt.Sprintf(existsQuery, label, property), nil)
+	name := buildConfigName(variantName, label, property)
+	_, err := txCtx.neoTx.Run(fmt.Sprintf(query, name, label, property), nil)
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to create constraint")
+		logrus.WithError(err).WithFields(logrus.Fields{"variant": variantName, "label": label, "property": property}).Error("Failed to create constraint")
 	}
 }
 
