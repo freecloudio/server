@@ -7,8 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TODO: Plugin Close
+
 // PluginInitializationFunc is a func for initializing a persistence plugin
-type PluginInitializationFunc func() error
+type PluginInitializationFunc func() error // TODO: fcerror
 
 var pluginInitFuncs = map[config.PersistencePluginKey]PluginInitializationFunc{}
 var pluginsUsed = map[config.PersistencePluginKey]struct{}{}

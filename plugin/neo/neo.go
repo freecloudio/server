@@ -21,12 +21,26 @@ func init() {
 
 var neo neo4j.Driver
 
+type NeoEdition int
+
+const (
+	NeoEditionEnterprise NeoEdition = iota
+	NeoEditionCommunity
+)
+
 func InitializeNeo() (err error) {
 	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), noEncrypted)
 	if err != nil {
 		return
 	}
 	neo = driver
+
+	fcerr := initializeConstraintsAndIndexes()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to initialize neo constraints - continue without")
+		fcerr = nil
+	}
+
 	return
 }
 
@@ -87,20 +101,116 @@ func (trCtx *transactionCtx) Rollback() *fcerror.Error {
 	return fcerror.NewError(fcerror.ErrDBRollbackFailed, err)
 }
 
-func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, err error) {
+func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, fcerr *fcerror.Error) {
 	session, err := neo.NewSession(neo4j.SessionConfig{AccessMode: accessMode})
 	if err != nil {
-		err = fmt.Errorf("failed to create neo4j session: %v", err)
+		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		return
 	}
 	neoTx, err := session.BeginTransaction()
 	if err != nil {
-		err = fmt.Errorf("failed to create neo4j transaction: %v", err)
+		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
 		session.Close()
 		return
 	}
 	txCtx = &transactionCtx{session, neoTx}
 	return
+}
+
+// Specify depending on the model tags which constraints should be set for a label
+type labelModelMapping struct {
+	label string
+	model interface{}
+}
+
+// List of labels mapped to models filled in 'init' functions of each repository
+var labelModelMappings []*labelModelMapping
+
+func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
+	neoEdition, fcerr := fetchNeoEdition()
+	if fcerr != nil {
+		return
+	}
+
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
+	if fcerr != nil {
+		return
+	}
+
+	for _, constraint := range labelModelMappings {
+		modelValue := reflect.ValueOf(constraint.model).Elem()
+		modelType := modelValue.Type()
+
+		for it := 0; it < modelType.NumField(); it++ {
+			typeField := modelType.Field(it)
+			dbNamePtr := getDBFieldName(typeField)
+			if dbNamePtr == nil {
+				continue
+			}
+
+			if isUniqueField(typeField) {
+				insertUniqueConstraint(txCtx, constraint.label, *dbNamePtr)
+			}
+			if isIndexField(typeField) {
+				insertIndex(txCtx, constraint.label, *dbNamePtr)
+			}
+			if neoEdition == NeoEditionEnterprise && !isOptionalField(typeField) {
+				insertExistsConstraint(txCtx, constraint.label, *dbNamePtr)
+			}
+		}
+	}
+
+	fcerr = txCtx.Commit()
+	return
+}
+
+func insertUniqueConstraint(txCtx *transactionCtx, label, property string) {
+	uniqueQuery := "CREATE CONSTRAINT IF NOT EXISTS ON (n:%s) ASSERT n.%s IS UNIQUE"
+	_, err := txCtx.neoTx.Run(fmt.Sprintf(uniqueQuery, label, property), nil)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to create constraint")
+	}
+}
+
+func insertIndex(txCtx *transactionCtx, label, property string) {
+	indexQuery := "CREATE INDEX IF NOT EXISTS FOR (n:%s) ON (n.%s)"
+	_, err := txCtx.neoTx.Run(fmt.Sprintf(indexQuery, label, property), nil)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to create index")
+	}
+}
+
+func insertExistsConstraint(txCtx *transactionCtx, label, property string) {
+	existsQuery := "CREATE CONSTRAINT IF NOT EXISTS ON (n:%s) ASSERT EXISTS (n.%s)"
+	_, err := txCtx.neoTx.Run(fmt.Sprintf(existsQuery, label, property), nil)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to create constraint")
+	}
+}
+
+func fetchNeoEdition() (neoEdition NeoEdition, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
+	if fcerr != nil {
+		return
+	}
+	defer txCtx.Close()
+
+	record, err := neo4j.Single(txCtx.neoTx.Run("CALL dbms.components() yield edition", nil))
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrDBReadFailed, fcerror.ErrDBReadFailed)
+		return
+	}
+
+	editionInt, ok := record.Get("edition")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrDBReadFailed, nil)
+		return
+	}
+
+	if editionInt.(string) == "enterprise" {
+		return NeoEditionEnterprise, nil
+	}
+	return NeoEditionCommunity, nil
 }
 
 // Convert given struct to a map with the 'fc_neo' / 'json' / field name as key and the field value as value
@@ -171,7 +281,7 @@ func recordToModel(record neo4j.Record, key string, model interface{}) error {
 func getDBFieldName(typeField reflect.StructField) *string {
 	var fieldTag string
 	if fcNeoFieldTag := typeField.Tag.Get("fc_neo"); fcNeoFieldTag != "" {
-		fieldTag = fcNeoFieldTag
+		fieldTag = strings.Split(fcNeoFieldTag, ",")[0]
 	} else {
 		fieldTag = strings.Split(typeField.Tag.Get("json"), ",")[0]
 	}
@@ -183,6 +293,42 @@ func getDBFieldName(typeField reflect.StructField) *string {
 	} else {
 		return &(typeField.Name)
 	}
+}
+
+func isUniqueField(typeField reflect.StructField) bool {
+	if getDBFieldName(typeField) == nil {
+		return false
+	}
+
+	tagParts := strings.SplitN(typeField.Tag.Get("fc_neo"), ",", 2)
+	if len(tagParts) < 2 {
+		return false
+	}
+	return strings.Contains(tagParts[1], "unique")
+}
+
+func isOptionalField(typeField reflect.StructField) bool {
+	if getDBFieldName(typeField) == nil {
+		return true
+	}
+
+	tagParts := strings.SplitN(typeField.Tag.Get("fc_neo"), ",", 2)
+	if len(tagParts) < 2 {
+		return false
+	}
+	return strings.Contains(tagParts[1], "optional")
+}
+
+func isIndexField(typeField reflect.StructField) bool {
+	if getDBFieldName(typeField) == nil {
+		return false
+	}
+
+	tagParts := strings.SplitN(typeField.Tag.Get("fc_neo"), ",", 2)
+	if len(tagParts) < 2 {
+		return false
+	}
+	return strings.Contains(tagParts[1], "index")
 }
 
 func isNotFoundError(err error) bool {

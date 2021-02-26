@@ -16,25 +16,24 @@ import (
 
 func init() {
 	persistence.RegisterUserPersistenceController(config.NeoPersistenceKey, &UserPersistence{})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "User", model: &models.User{}})
 }
 
 type UserPersistence struct{}
 
 func (up *UserPersistence) StartReadTransaction() (tx persistence.UserPersistenceReadTransaction, fcerr *fcerror.Error) {
-	txCtx, err := newTransactionContext(neo4j.AccessModeRead)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to create neo read transaction")
-		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create neo read transaction")
 		return
 	}
 	return &userReadTransaction{txCtx}, nil
 }
 
 func (up *UserPersistence) StartReadWriteTransaction() (tx persistence.UserPersistenceReadWriteTransaction, fcerr *fcerror.Error) {
-	txCtx, err := newTransactionContext(neo4j.AccessModeWrite)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to create neo write transaction")
-		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create neo write transaction")
 		return
 	}
 	return &userReadWriteTransaction{userReadTransaction{txCtx}}, nil
