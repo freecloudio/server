@@ -1,7 +1,7 @@
 package fcerror
 
 const (
-	ErrUserNotFound = iota + 100
+	ErrUserNotFound ErrorID = iota + 100
 	ErrEmailAlreadyRegistered
 )
 

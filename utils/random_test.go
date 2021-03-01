@@ -4,19 +4,16 @@ import (
 	"testing"
 
 	"github.com/freecloudio/server/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateRandomStringLength(t *testing.T) {
 	var l = []int{1, 5, 10, 20}
 	for _, v := range l {
-		if length := len(utils.GenerateRandomString(v)); length != v {
-			t.Errorf("Expected string of length %d, but got %d", v, length)
-		}
+		assert.Equal(t, v, len(utils.GenerateRandomString(v)), "Random string has wrong length")
 	}
 }
 
 func TestGenerateRandomStringUnique(t *testing.T) {
-	if utils.GenerateRandomString(10) == utils.GenerateRandomString(10) { //nolint:staticcheck
-		t.Error("Expected two different random strings but got two times the same")
-	}
+	assert.NotEqual(t, utils.GenerateRandomString(10), utils.GenerateRandomString(10), "Two different random string are the same")
 }

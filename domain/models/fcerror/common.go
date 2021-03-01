@@ -1,7 +1,7 @@
 package fcerror
 
 const (
-	ErrUnknown = iota
+	ErrUnknown ErrorID = iota + 1
 	ErrModelConversionFailed
 	ErrBadRequest
 )

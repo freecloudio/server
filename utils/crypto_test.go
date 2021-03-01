@@ -2,6 +2,8 @@ package utils
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseScryptStub(t *testing.T) {
@@ -33,31 +35,18 @@ func TestParseScryptStub(t *testing.T) {
 func TestPasswordHashing(t *testing.T) {
 	// verify that hashing the same password two times does not yield the same result
 	h1, err := HashScrypt("testpassword")
-	if err != nil {
-		t.Errorf("Error while hashing password: %v", err)
-		return
-	}
+	assert.NoError(t, err, "Error while hashing password")
+
 	h2, err := HashScrypt("testpassword")
-	if err != nil {
-		t.Errorf("Error while hashing password: %v", err)
-		return
-	}
-	if h1 == h2 {
-		t.Errorf("Hashing the same password twice yielded the same result: %s", h1)
-		return
-	}
+	assert.NoError(t, err, "Error while hashing password")
+
+	assert.NotEqual(t, h1, h2, "Hashing the same password twice yielded the same result")
+
 	// first, hash a password, then test it against itself
 	hash, err := HashScrypt("h4x0r!")
-	if err != nil {
-		t.Errorf("Got error while hashing password: %v", err)
-		return
-	}
+	assert.NoError(t, err, "Error while hashing password")
+
 	valid, err := ValidateScryptPassword("h4x0r!", hash)
-	if err != nil {
-		t.Errorf("Got error while validating password: %v", err)
-		return
-	}
-	if !valid {
-		t.Errorf("Expected a valid password verification, but it failed")
-	}
+	assert.NoError(t, err, "Error while validating password")
+	assert.True(t, valid, "Expected a valid password verification, but it failed")
 }
