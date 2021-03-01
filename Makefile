@@ -8,3 +8,6 @@ run: build
 
 gocal:
 	gocal
+
+test:
+	go test ./... --cover
