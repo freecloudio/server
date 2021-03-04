@@ -55,9 +55,8 @@ func (tx *userReadTransaction) GetUserByID(userID models.UserID) (user *models.U
 	}
 
 	user = &models.User{}
-	err = recordToModel(record, "u", user)
-	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, err)
+	fcerr = recordToModel(record, "u", user)
+	if fcerr != nil {
 		return
 	}
 	user.ID = userID
@@ -76,9 +75,8 @@ func (tx *userReadTransaction) GetUserByEmail(email string) (user *models.User, 
 	}
 
 	user = &models.User{}
-	err = recordToModel(record, "u", user)
-	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, err)
+	fcerr = recordToModel(record, "u", user)
+	if fcerr != nil {
 		return
 	}
 	userIDInt, ok := record.Get("id")

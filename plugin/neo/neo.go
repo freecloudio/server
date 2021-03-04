@@ -279,14 +279,14 @@ func modelToMap(model interface{}) map[string]interface{} {
 	return modelMap
 }
 
-func recordToModel(record neo4j.Record, key string, model interface{}) error {
+func recordToModel(record neo4j.Record, key string, model interface{}) *fcerror.Error {
 	valInt, ok := record.Get(key)
 	if !ok {
-		return errors.New("value not found with key '" + key + "'")
+		return fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("value not found with key '"+key+"'"))
 	}
 	valNode, ok := valInt.(neo4j.Node)
 	if !ok {
-		return errors.New("value with key '" + key + "' could not be converted to 'neo4j.Node'")
+		return fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("value with key '"+key+"' could not be converted to 'neo4j.Node'"))
 	}
 	valProps := valNode.Props()
 

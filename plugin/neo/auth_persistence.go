@@ -57,9 +57,8 @@ func (tx *authReadTransaction) GetSessionByToken(token models.Token) (session *m
 	}
 
 	session = &models.Session{}
-	err = recordToModel(record, "s", session)
-	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, err)
+	fcerr = recordToModel(record, "s", session)
+	if fcerr != nil {
 		return
 	}
 

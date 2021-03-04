@@ -1,6 +1,6 @@
 package neo
 
-//go:generate mockgen -destination ../../mock/neo4j.go -package mock github.com/neo4j/neo4j-go-driver/neo4j Record,Node
+//go:generate mockgen -destination ../../mock/neo4j.go -package mock github.com/neo4j/neo4j-go-driver/neo4j Record,Node,Driver
 
 import (
 	"errors"
@@ -33,6 +33,33 @@ type optionalModel struct {
 type indexModel struct {
 	Index    string `fc_neo:"indexProp,index"`
 	NotIndex string `fc_neo:"indexProp"`
+}
+
+func TestCloseNeo(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	neoMock := mock.NewMockDriver(mockCtrl)
+	neoMock.EXPECT().Close().Return(nil).Times(1)
+	neo = neoMock
+	defer func() { neo = nil }()
+
+	fcerr := CloseNeo()
+	assert.Nil(t, fcerr, "Closing neo driver failed")
+}
+
+func TestCloseNeoError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	neoMock := mock.NewMockDriver(mockCtrl)
+	neoMock.EXPECT().Close().Return(errors.New("Some error")).Times(1)
+	neo = neoMock
+	defer func() { neo = nil }()
+
+	fcerr := CloseNeo()
+	assert.NotNil(t, fcerr, "Closing neo driver succeed but should fail")
+	assert.Equal(t, fcerror.ErrDBCloseFailed, fcerr.ID, "Wrong error id for failed db close")
 }
 
 func TestBuildConfigNameContainsNeededInfo(t *testing.T) {
@@ -90,8 +117,8 @@ func TestRecordToModel(t *testing.T) {
 	inputRecord.EXPECT().Get(inputKey).Return(inputNode, true).Times(1)
 
 	actualModel := &testModel{}
-	err := recordToModel(inputRecord, "key", actualModel)
-	assert.NoError(t, err, "Could not get model from record")
+	fcerr := recordToModel(inputRecord, "key", actualModel)
+	assert.Nil(t, fcerr, "Could not get model from record")
 	assert.Equal(t, expectedModel, actualModel, "Model from record does not match expected model")
 }
 
@@ -105,8 +132,8 @@ func TestRecordToModelWrongKey(t *testing.T) {
 	inputRecord.EXPECT().Get(inputKey).Return(nil, false).Times(1)
 
 	actualModel := &testModel{}
-	err := recordToModel(inputRecord, inputKey, actualModel)
-	assert.Error(t, err, "Record to model did not fail with wrong key")
+	fcerr := recordToModel(inputRecord, inputKey, actualModel)
+	assert.Error(t, fcerr, "Record to model did not fail with wrong key")
 }
 
 func TestRecordToModelWrongNodeType(t *testing.T) {
@@ -119,8 +146,8 @@ func TestRecordToModelWrongNodeType(t *testing.T) {
 	inputRecord.EXPECT().Get(inputKey).Return("No Node", true).Times(1)
 
 	actualModel := &testModel{}
-	err := recordToModel(inputRecord, inputKey, actualModel)
-	assert.Error(t, err, "Record to model did not fail with wrong node type")
+	fcerr := recordToModel(inputRecord, inputKey, actualModel)
+	assert.Error(t, fcerr, "Record to model did not fail with wrong node type")
 }
 
 func TestIsUniqueField(t *testing.T) {
@@ -192,7 +219,7 @@ func TestNeoToFcError(t *testing.T) {
 
 	for _, test := range tests {
 		if test.neoErr == nil {
-			assert.NoError(t, neoToFcError(test.neoErr, notFoundErr, otherErr), "Got err for nil input")
+			assert.Nil(t, neoToFcError(test.neoErr, notFoundErr, otherErr), "Got err for nil input")
 		} else {
 			assert.Equal(t, test.fcErr, neoToFcError(test.neoErr, notFoundErr, otherErr).ID, "Unexpected neo to fc error conversion")
 		}

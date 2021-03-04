@@ -35,18 +35,18 @@ func TestParseScryptStub(t *testing.T) {
 func TestPasswordHashing(t *testing.T) {
 	// verify that hashing the same password two times does not yield the same result
 	h1, err := HashScrypt("testpassword")
-	assert.NoError(t, err, "Error while hashing password")
+	assert.Nil(t, err, "Error while hashing password")
 
 	h2, err := HashScrypt("testpassword")
-	assert.NoError(t, err, "Error while hashing password")
+	assert.Nil(t, err, "Error while hashing password")
 
 	assert.NotEqual(t, h1, h2, "Hashing the same password twice yielded the same result")
 
 	// first, hash a password, then test it against itself
 	hash, err := HashScrypt("h4x0r!")
-	assert.NoError(t, err, "Error while hashing password")
+	assert.Nil(t, err, "Error while hashing password")
 
 	valid, err := ValidateScryptPassword("h4x0r!", hash)
-	assert.NoError(t, err, "Error while validating password")
+	assert.Nil(t, err, "Error while validating password")
 	assert.True(t, valid, "Expected a valid password verification, but it failed")
 }

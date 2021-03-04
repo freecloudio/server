@@ -1,7 +1,7 @@
 package fcerror
 
 const (
-	ErrDBTransactionCreationFailed = iota + 300
+	ErrDBTransactionCreationFailed ErrorID = iota + 300
 	ErrDBWriteFailed
 	ErrDBReadFailed
 	ErrDBCommitFailed
