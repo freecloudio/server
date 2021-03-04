@@ -1,6 +1,6 @@
 package neo
 
-//go:generate mockgen -destination ../../mock/neo4j.go -package mock github.com/neo4j/neo4j-go-driver/neo4j Record,Node,Driver
+//go:generate mockgen -destination ../../mock/neo4j.go -package mock github.com/neo4j/neo4j-go-driver/neo4j Record,Node,Driver,Session,Transaction
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
 	"github.com/golang/mock/gomock"
+	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,6 +61,176 @@ func TestCloseNeoError(t *testing.T) {
 	fcerr := CloseNeo()
 	assert.NotNil(t, fcerr, "Closing neo driver succeed but should fail")
 	assert.Equal(t, fcerror.ErrDBCloseFailed, fcerr.ID, "Wrong error id for failed db close")
+}
+
+func TestTransactionClose(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+	trCtx := &transactionCtx{sessionMock, nil}
+
+	fcerr := trCtx.Close()
+	assert.Nil(t, fcerr, "Closing transaction failed")
+}
+
+func TestTransactionCloseError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(errors.New("Some error")).Times(1)
+	trCtx := &transactionCtx{sessionMock, nil}
+
+	fcerr := trCtx.Close()
+	assert.NotNil(t, fcerr, "Closing transaction failed")
+	assert.Equal(t, fcerror.ErrDBCloseSessionFailed, fcerr.ID, "Wrong error id for failed close transaction")
+}
+
+func TestTransactionFinishRollback(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+	txMock.EXPECT().Rollback().Return(nil).Times(1)
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+	trCtx := &transactionCtx{sessionMock, txMock}
+
+	inputErrID := fcerror.ErrUnknown
+	fcerr := trCtx.Finish(fcerror.NewError(inputErrID, nil))
+	assert.NotNil(t, fcerr, "Finishing transaction succeeded but should not")
+	assert.Equal(t, inputErrID, fcerr.ID, "Finish err does not match input err id")
+}
+
+func TestTransactionFinishCommit(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+	txMock.EXPECT().Commit().Return(nil).Times(1)
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+	trCtx := &transactionCtx{sessionMock, txMock}
+
+	fcerr := trCtx.Finish(nil)
+	assert.Nil(t, fcerr, "Finishing transaction failed")
+}
+
+func TestTransactionCommit(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+	txMock.EXPECT().Commit().Return(nil).Times(1)
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+	trCtx := &transactionCtx{sessionMock, txMock}
+
+	fcerr := trCtx.Commit()
+	assert.Nil(t, fcerr, "Commit transaction failed")
+}
+
+func TestTransactionCommitError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+	txMock.EXPECT().Commit().Return(errors.New("Some error")).Times(1)
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+	trCtx := &transactionCtx{sessionMock, txMock}
+
+	fcerr := trCtx.Commit()
+	assert.NotNil(t, fcerr, "Commit transaction succeeded but should fail")
+	assert.Equal(t, fcerror.ErrDBCommitFailed, fcerr.ID, "Commit err does not match expected err id")
+}
+
+func TestTransactionCommitSessionError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+	txMock.EXPECT().Commit().Return(nil).Times(1)
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(errors.New("Some error")).Times(1)
+	trCtx := &transactionCtx{sessionMock, txMock}
+
+	fcerr := trCtx.Commit()
+	assert.NotNil(t, fcerr, "Commit transaction succeeded but should fail")
+	assert.Equal(t, fcerror.ErrDBCommitFailed, fcerr.ID, "Commit err does not match expected err id")
+}
+
+func TestTransactionRollback(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+	txMock.EXPECT().Rollback().Return(nil).Times(1)
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+	trCtx := &transactionCtx{sessionMock, txMock}
+
+	trCtx.Rollback()
+}
+
+func TestNewTransactionContext(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	inputAccessMode := neo4j.AccessModeWrite
+
+	txMock := mock.NewMockTransaction(mockCtrl)
+
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().BeginTransaction(gomock.Any()).Return(txMock, nil).Times(1)
+
+	neoMock := mock.NewMockDriver(mockCtrl)
+	neoMock.EXPECT().Session(inputAccessMode).Return(sessionMock, nil).Times(1)
+	neo = neoMock
+	defer func() { neo = nil }()
+
+	txCtx, fcerr := newTransactionContext(inputAccessMode)
+	assert.Nil(t, fcerr, "Failed to create transaction context")
+	assert.Equal(t, sessionMock, txCtx.session, "Transaction session does not match mock")
+	assert.Equal(t, txMock, txCtx.neoTx, "Transaction does not match mock")
+}
+
+func TestNewTransactionContextSessionError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	inputAccessMode := neo4j.AccessModeWrite
+
+	neoMock := mock.NewMockDriver(mockCtrl)
+	neoMock.EXPECT().Session(inputAccessMode).Return(nil, errors.New("Some error")).Times(1)
+	neo = neoMock
+	defer func() { neo = nil }()
+
+	_, fcerr := newTransactionContext(inputAccessMode)
+	assert.NotNil(t, fcerr, "Create transaction context succeeded but should fail")
+	assert.Equal(t, fcerror.ErrDBTransactionCreationFailed, fcerr.ID, "Err ID does not match expected one")
+}
+
+func TestNewTransactionContextTxError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	inputAccessMode := neo4j.AccessModeWrite
+
+	sessionMock := mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().BeginTransaction(gomock.Any()).Return(nil, errors.New("Some error")).Times(1)
+	sessionMock.EXPECT().Close().Return(nil).Times(1)
+
+	neoMock := mock.NewMockDriver(mockCtrl)
+	neoMock.EXPECT().Session(inputAccessMode).Return(sessionMock, nil).Times(1)
+	neo = neoMock
+	defer func() { neo = nil }()
+
+	_, fcerr := newTransactionContext(inputAccessMode)
+	assert.NotNil(t, fcerr, "Create transaction context succeeded but should fail")
+	assert.Equal(t, fcerror.ErrDBTransactionCreationFailed, fcerr.ID, "Err ID does not match expected one")
 }
 
 func TestBuildConfigNameContainsNeededInfo(t *testing.T) {

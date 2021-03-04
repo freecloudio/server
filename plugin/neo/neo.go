@@ -98,13 +98,7 @@ func (trCtx *transactionCtx) Finish(fcerr *fcerror.Error) *fcerror.Error {
 		return fcerr
 	}
 
-	fcerr = trCtx.Commit()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to commit transaction")
-		return fcerr
-	}
-
-	return nil
+	return trCtx.Commit()
 }
 
 func (trCtx *transactionCtx) Commit() *fcerror.Error {
