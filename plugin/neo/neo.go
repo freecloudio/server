@@ -92,6 +92,21 @@ func (trCtx *transactionCtx) Close() (fcerr *fcerror.Error) {
 	return
 }
 
+func (trCtx *transactionCtx) Finish(fcerr *fcerror.Error) *fcerror.Error {
+	if fcerr != nil {
+		trCtx.Rollback()
+		return fcerr
+	}
+
+	fcerr = trCtx.Commit()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to commit transaction")
+		return fcerr
+	}
+
+	return nil
+}
+
 func (trCtx *transactionCtx) Commit() *fcerror.Error {
 	var err error
 	txErr := trCtx.neoTx.Commit()

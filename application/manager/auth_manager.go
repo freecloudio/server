@@ -69,17 +69,11 @@ func (mgr *authManager) cleanupExpiredSessions() {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
+	defer func() { trans.Finish(fcerr) }()
 
 	fcerr = trans.DeleteExpiredSessions()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to delete expired sessions")
-		trans.Rollback()
-		return
-	}
-
-	fcerr = trans.Commit()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
 }
@@ -121,17 +115,11 @@ func (mgr *authManager) Logout(token models.Token) (fcerr *fcerror.Error) {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
+	defer func() { fcerr = trans.Finish(fcerr) }()
 
 	fcerr = trans.DeleteSessionByToken(token)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to delete token")
-		trans.Rollback()
-		return
-	}
-
-	fcerr = trans.Commit()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
 
@@ -244,15 +232,11 @@ func (mgr *authManager) createNewSession(userID models.UserID) (session *models.
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
+	defer func() { fcerr = trans.Finish(fcerr) }()
+
 	fcerr = trans.SaveSession(session)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to save user")
-		trans.Rollback()
-		return
-	}
-	fcerr = trans.Commit()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
 	return session, nil

@@ -68,7 +68,8 @@ type ReadTransaction interface {
 
 // ReadWriteTransaction stands for a transaction of any persistence plugin
 type ReadWriteTransaction interface {
-	ReadTransaction
+	// Should either rollback or commit depending on preceding error
+	Finish(fcerr *fcerror.Error) *fcerror.Error
 	Commit() *fcerror.Error
 	Rollback()
 }
