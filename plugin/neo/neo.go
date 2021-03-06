@@ -220,7 +220,7 @@ func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, proper
 
 	name := buildConfigName(variantName, label, property)
 	res, err := txCtx.neoTx.Run(fmt.Sprintf(query, name, label, property), nil)
-	if res == nil {
+	if err == nil {
 		_, err = res.Consume()
 	}
 	if err != nil {

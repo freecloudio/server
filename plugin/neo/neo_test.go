@@ -1,12 +1,13 @@
 package neo
 
-//go:generate mockgen -destination ../../mock/neo4j.go -package mock github.com/neo4j/neo4j-go-driver/neo4j Record,Node,Driver,Session,Transaction
+//go:generate mockgen -destination ../../mock/neo4j.go -package mock github.com/neo4j/neo4j-go-driver/neo4j Record,Node,Driver,Session,Transaction,Result
 
 import (
 	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
 	"github.com/golang/mock/gomock"
@@ -14,26 +15,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func createTrCtxMock(mockCtrl *gomock.Controller) (trCtx *transactionCtx, sessionMock *mock.MockSession, txMock *mock.MockTransaction) {
+	txMock = mock.NewMockTransaction(mockCtrl)
+	sessionMock = mock.NewMockSession(mockCtrl)
+	trCtx = &transactionCtx{sessionMock, txMock}
+	return
+}
+
 type testModel struct {
 	Prop1   string `json:"prop1"`
 	Prop2   string `json:"prop2" fc_neo:"changed2"`
 	Prop3   string `fc_neo:"changed3,unique"`
 	DontUse string `fc_neo:"-"`
+	DefName string
+	Token   models.Token
 }
 
 type uniqueModel struct {
 	Unique    string `fc_neo:"uniqueProp,unique"`
 	NotUnique string `fc_neo:"notUniqueProp"`
+	DontUse   string `fc_neo:"-"`
 }
 
 type optionalModel struct {
 	Optional    string `fc_neo:"uniqueProp,optional"`
 	NotOptional string `fc_neo:"notOptionalProp"`
+	DontUse     string `fc_neo:"-"`
 }
 
 type indexModel struct {
 	Index    string `fc_neo:"indexProp,index"`
 	NotIndex string `fc_neo:"indexProp"`
+	DontUse  string `fc_neo:"-"`
 }
 
 func TestCloseNeo(t *testing.T) {
@@ -67,9 +80,8 @@ func TestTransactionClose(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	sessionMock := mock.NewMockSession(mockCtrl)
+	trCtx, sessionMock, _ := createTrCtxMock(mockCtrl)
 	sessionMock.EXPECT().Close().Return(nil).Times(1)
-	trCtx := &transactionCtx{sessionMock, nil}
 
 	fcerr := trCtx.Close()
 	assert.Nil(t, fcerr, "Closing transaction failed")
@@ -79,9 +91,8 @@ func TestTransactionCloseError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	sessionMock := mock.NewMockSession(mockCtrl)
+	trCtx, sessionMock, _ := createTrCtxMock(mockCtrl)
 	sessionMock.EXPECT().Close().Return(errors.New("Some error")).Times(1)
-	trCtx := &transactionCtx{sessionMock, nil}
 
 	fcerr := trCtx.Close()
 	assert.NotNil(t, fcerr, "Closing transaction failed")
@@ -92,11 +103,9 @@ func TestTransactionFinishRollback(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	txMock := mock.NewMockTransaction(mockCtrl)
+	trCtx, sessionMock, txMock := createTrCtxMock(mockCtrl)
 	txMock.EXPECT().Rollback().Return(nil).Times(1)
-	sessionMock := mock.NewMockSession(mockCtrl)
 	sessionMock.EXPECT().Close().Return(nil).Times(1)
-	trCtx := &transactionCtx{sessionMock, txMock}
 
 	inputErrID := fcerror.ErrUnknown
 	fcerr := trCtx.Finish(fcerror.NewError(inputErrID, nil))
@@ -108,71 +117,73 @@ func TestTransactionFinishCommit(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	txMock := mock.NewMockTransaction(mockCtrl)
+	trCtx, sessionMock, txMock := createTrCtxMock(mockCtrl)
 	txMock.EXPECT().Commit().Return(nil).Times(1)
-	sessionMock := mock.NewMockSession(mockCtrl)
 	sessionMock.EXPECT().Close().Return(nil).Times(1)
-	trCtx := &transactionCtx{sessionMock, txMock}
 
 	fcerr := trCtx.Finish(nil)
 	assert.Nil(t, fcerr, "Finishing transaction failed")
 }
 
 func TestTransactionCommit(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	tests := []struct {
+		name        string
+		commitErr   error
+		closeErr    error
+		expectedErr fcerror.ErrorID
+	}{
+		{name: "Success", commitErr: nil, closeErr: nil, expectedErr: fcerror.ErrorID(-1)},
+		{name: "Commit Error", commitErr: errors.New("Some error"), closeErr: nil, expectedErr: fcerror.ErrDBCommitFailed},
+		{name: "Close Error", commitErr: nil, closeErr: errors.New("Some error"), expectedErr: fcerror.ErrDBCommitFailed},
+		{name: "Commit & Close Error", commitErr: errors.New("Some error"), closeErr: errors.New("Some error"), expectedErr: fcerror.ErrDBCommitFailed},
+	}
 
-	txMock := mock.NewMockTransaction(mockCtrl)
-	txMock.EXPECT().Commit().Return(nil).Times(1)
-	sessionMock := mock.NewMockSession(mockCtrl)
-	sessionMock.EXPECT().Close().Return(nil).Times(1)
-	trCtx := &transactionCtx{sessionMock, txMock}
+	for it := range tests {
+		test := tests[it]
+		t.Run(test.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-	fcerr := trCtx.Commit()
-	assert.Nil(t, fcerr, "Commit transaction failed")
-}
+			trCtx, sessionMock, txMock := createTrCtxMock(mockCtrl)
+			txMock.EXPECT().Commit().Return(test.commitErr).Times(1)
+			sessionMock.EXPECT().Close().Return(test.closeErr).Times(1)
 
-func TestTransactionCommitError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	txMock := mock.NewMockTransaction(mockCtrl)
-	txMock.EXPECT().Commit().Return(errors.New("Some error")).Times(1)
-	sessionMock := mock.NewMockSession(mockCtrl)
-	sessionMock.EXPECT().Close().Return(nil).Times(1)
-	trCtx := &transactionCtx{sessionMock, txMock}
-
-	fcerr := trCtx.Commit()
-	assert.NotNil(t, fcerr, "Commit transaction succeeded but should fail")
-	assert.Equal(t, fcerror.ErrDBCommitFailed, fcerr.ID, "Commit err does not match expected err id")
-}
-
-func TestTransactionCommitSessionError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	txMock := mock.NewMockTransaction(mockCtrl)
-	txMock.EXPECT().Commit().Return(nil).Times(1)
-	sessionMock := mock.NewMockSession(mockCtrl)
-	sessionMock.EXPECT().Close().Return(errors.New("Some error")).Times(1)
-	trCtx := &transactionCtx{sessionMock, txMock}
-
-	fcerr := trCtx.Commit()
-	assert.NotNil(t, fcerr, "Commit transaction succeeded but should fail")
-	assert.Equal(t, fcerror.ErrDBCommitFailed, fcerr.ID, "Commit err does not match expected err id")
+			fcerr := trCtx.Commit()
+			if test.expectedErr == fcerror.ErrorID(-1) {
+				assert.Nil(t, fcerr, "Commit transaction failed")
+			} else {
+				assert.NotNil(t, fcerr, "Commit transaction succeeded but should fail")
+				assert.Equal(t, test.expectedErr, fcerr.ID, "Commit err does not match expected err id")
+			}
+		})
+	}
 }
 
 func TestTransactionRollback(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	tests := []struct {
+		name      string
+		commitErr error
+		closeErr  error
+	}{
+		{name: "Success", commitErr: nil, closeErr: nil},
+		{name: "Commit Error", commitErr: errors.New("Some error"), closeErr: nil},
+		{name: "Close Error", commitErr: nil, closeErr: errors.New("Some error")},
+		{name: "Commit & Close Error", commitErr: errors.New("Some error"), closeErr: errors.New("Some error")},
+	}
 
-	txMock := mock.NewMockTransaction(mockCtrl)
-	txMock.EXPECT().Rollback().Return(nil).Times(1)
-	sessionMock := mock.NewMockSession(mockCtrl)
-	sessionMock.EXPECT().Close().Return(nil).Times(1)
-	trCtx := &transactionCtx{sessionMock, txMock}
+	for it := range tests {
+		test := tests[it]
+		t.Run(test.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-	trCtx.Rollback()
+			trCtx, sessionMock, txMock := createTrCtxMock(mockCtrl)
+			txMock.EXPECT().Rollback().Return(test.commitErr).Times(1)
+			sessionMock.EXPECT().Close().Return(test.closeErr).Times(1)
+
+			trCtx.Rollback()
+		})
+	}
 }
 
 func TestNewTransactionContext(t *testing.T) {
@@ -245,18 +256,55 @@ func TestBuildConfigNameContainsNeededInfo(t *testing.T) {
 	assert.Contains(t, configName, property, "Expect configName to contain property")
 }
 
+func TestInsertConfig(t *testing.T) {
+	tests := []struct {
+		name       string
+		variant    NeoConfigVariant
+		runErr     error
+		consumeErr error
+	}{
+		{name: "unique", variant: NeoConfigUniqueConstraint, runErr: nil, consumeErr: nil},
+		{name: "property", variant: NeoConfigPropertyConstraint, runErr: nil, consumeErr: nil},
+		{name: "index", variant: NeoConfigIndex, runErr: nil, consumeErr: nil},
+		{name: "unique run err", variant: NeoConfigUniqueConstraint, runErr: errors.New("Some error"), consumeErr: nil},
+		{name: "property consume err", variant: NeoConfigPropertyConstraint, runErr: nil, consumeErr: errors.New("Some error")},
+	}
+
+	for it := range tests {
+		test := tests[it]
+		t.Run(test.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockResult := mock.NewMockResult(mockCtrl)
+			if test.runErr == nil {
+				mockResult.EXPECT().Consume().Return(nil, test.consumeErr).Times(1)
+			}
+
+			trCtx, _, txMock := createTrCtxMock(mockCtrl)
+			txMock.EXPECT().Run(gomock.Any(), gomock.Any()).Return(mockResult, test.runErr).Times(1)
+
+			insertConfig(trCtx, test.variant, "label", "property")
+		})
+	}
+}
+
 func TestModelToMap(t *testing.T) {
 	inputModel := &testModel{
 		Prop1:   "value1",
 		Prop2:   "value2",
 		Prop3:   "value3",
 		DontUse: "valueDontUse",
+		DefName: "value4",
+		Token:   models.Token("token"),
 	}
 
 	expectedMap := map[string]interface{}{
 		"prop1":    inputModel.Prop1,
 		"changed2": inputModel.Prop2,
 		"changed3": inputModel.Prop3,
+		"DefName":  inputModel.DefName,
+		"Token":    inputModel.Token,
 	}
 
 	actualMap := modelToMap(inputModel)
@@ -269,9 +317,11 @@ func TestRecordToModel(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	expectedModel := &testModel{
-		Prop1: "value1",
-		Prop2: "value2",
-		Prop3: "value3",
+		Prop1:   "value1",
+		Prop2:   "value2",
+		Prop3:   "value3",
+		DefName: "value4",
+		Token:   models.Token("token"),
 	}
 
 	inputKey := "key"
@@ -280,6 +330,8 @@ func TestRecordToModel(t *testing.T) {
 		"prop1":    expectedModel.Prop1,
 		"changed2": expectedModel.Prop2,
 		"changed3": expectedModel.Prop3,
+		"DefName":  expectedModel.DefName,
+		"Token":    string(expectedModel.Token),
 	}
 	inputNode := mock.NewMockNode(mockCtrl)
 	inputNode.EXPECT().Props().Return(inputMap).Times(1)
@@ -332,7 +384,7 @@ func TestIsUniqueField(t *testing.T) {
 
 		if it == 0 {
 			assert.True(t, isUniqueField(typeField), "Field should be unique")
-		} else if it == 1 {
+		} else if it > 0 {
 			assert.False(t, isUniqueField(typeField), "Field should not be unique")
 		}
 	}
@@ -347,7 +399,7 @@ func TestIsOptionalField(t *testing.T) {
 	for it := 0; it < modelValue.NumField(); it++ {
 		typeField := modelType.Field(it)
 
-		if it == 0 {
+		if it == 0 || it == 2 {
 			assert.True(t, isOptionalField(typeField), "Field should be optional")
 		} else if it == 1 {
 			assert.False(t, isOptionalField(typeField), "Field should not be optional")
@@ -366,7 +418,7 @@ func TestIsIndexField(t *testing.T) {
 
 		if it == 0 {
 			assert.True(t, isIndexField(typeField), "Field should be an index")
-		} else if it == 1 {
+		} else if it > 0 {
 			assert.False(t, isIndexField(typeField), "Field should not be an index")
 		}
 	}
@@ -386,6 +438,7 @@ func TestNeoToFcError(t *testing.T) {
 	}{
 		{errors.New("result contains no records"), notFoundErr},
 		{errors.New("some error"), otherErr},
+		{nil, fcerror.ErrUnknown},
 	}
 
 	for _, test := range tests {
