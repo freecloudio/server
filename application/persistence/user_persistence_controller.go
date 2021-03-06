@@ -15,6 +15,7 @@ type UserPersistenceController interface {
 
 type UserPersistenceReadTransaction interface {
 	ReadTransaction
+	CountUsers() (int64, *fcerror.Error)
 	GetUserByID(userID models.UserID) (*models.User, *fcerror.Error)
 	GetUserByEmail(email string) (*models.User, *fcerror.Error)
 }
@@ -23,6 +24,7 @@ type UserPersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
 	UserPersistenceReadTransaction
 	SaveUser(*models.User) *fcerror.Error
+	UpdateUser(*models.User) *fcerror.Error
 }
 
 var userPersistenceController = map[config.PersistencePluginKey]UserPersistenceController{}

@@ -1,0 +1,208 @@
+_type: export
+__export_format: 4
+__export_date: 2021-03-06T19:03:05.745Z
+__export_source: insomnia.desktop.app:v2020.5.2
+resources:
+  - _id: req_408d1d59221044c1a6b61db7d388ee77
+    parentId: fld_cae7105d28324ef68b9902d4360f28b7
+    modified: 1614273587208
+    created: 1614273555845
+    url: "{{base_url}}/api/auth/login"
+    name: Login
+    description: ""
+    method: POST
+    body:
+      mimeType: application/json
+      text: |-
+        {
+        	"email": "tom.tester@example.com",
+        	"password": "123456"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_acdd0010db534a6a87921f65d4809635
+    authentication: {}
+    metaSortKey: -1614273555845
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: fld_cae7105d28324ef68b9902d4360f28b7
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1614273553203
+    created: 1614273553203
+    name: Auth
+    description: ""
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1614273553203
+    _type: request_group
+  - _id: wrk_085358b34fdd4e32b74557ce56fdda2a
+    parentId: null
+    modified: 1592679770768
+    created: 1592679770768
+    name: freecloud
+    description: ""
+    scope: null
+    _type: workspace
+  - _id: req_a8058f3c495d42d38c17787085771f24
+    parentId: fld_cae7105d28324ef68b9902d4360f28b7
+    modified: 1614273710136
+    created: 1614273623750
+    url: "{{base_url}}/api/auth/logout"
+    name: Logout
+    description: ""
+    method: POST
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1603476684538.5
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_d1062ec6f1bb4f079db01aedc5cdb6a8
+    parentId: fld_8952315ac3704cd385cbac89df3182a2
+    modified: 1615057021633
+    created: 1614193498889
+    url: "{{base_url}}/api/user"
+    name: Register New User
+    description: ""
+    method: POST
+    body:
+      mimeType: application/json
+      text: |-
+        {
+        	"first_name": "Tom",
+        	"last_name": "Tester",
+        	"email": "tom.tester@example.com",
+        	"password": "123456"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_586dfdbb28684a13846e955ef2e35530
+    authentication: {}
+    metaSortKey: -1592679813232
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: fld_8952315ac3704cd385cbac89df3182a2
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1592679809081
+    created: 1592679803356
+    name: User
+    description: ""
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1592679803356
+    _type: request_group
+  - _id: req_b93c615d605346ef88e5338633492f58
+    parentId: fld_8952315ac3704cd385cbac89df3182a2
+    modified: 1614273713849
+    created: 1614271661520
+    url: "{{base_url}}/api/user"
+    name: Get Own User
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813207
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_60f337b245164a19a6de5fe488943cd2
+    parentId: fld_8952315ac3704cd385cbac89df3182a2
+    modified: 1615057149450
+    created: 1592679813182
+    url: "{{base_url}}/api/user/4"
+    name: Get User By ID
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813182
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: env_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1615056700303
+    created: 1592679770868
+    name: Base Environment
+    data:
+      token: "{% response 'body', 'req_408d1d59221044c1a6b61db7d388ee77',
+        'b64::JC50b2tlbg==::46b', 'never', 60 %}"
+    dataPropertyOrder:
+      "&":
+        - token
+    color: null
+    isPrivate: false
+    metaSortKey: 1592679770868
+    _type: environment
+  - _id: jar_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1592679770870
+    created: 1592679770870
+    name: Default Jar
+    cookies: []
+    _type: cookie_jar
+  - _id: spc_00d75ebf5a9a4700bcbc302c1de13fd4
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1592679770778
+    created: 1592679770778
+    fileName: freecloud
+    contents: ""
+    contentType: yaml
+    _type: api_spec
+  - _id: env_4d2ccec931b84c4db0e18eb3cae9eb85
+    parentId: env_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
+    modified: 1592679795673
+    created: 1592679778248
+    name: localhost
+    data:
+      base_url: localhost:8080
+    dataPropertyOrder:
+      "&":
+        - base_url
+    color: null
+    isPrivate: false
+    metaSortKey: 1592679778248
+    _type: environment

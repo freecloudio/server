@@ -162,16 +162,24 @@ func (mgr *authManager) CreateUser(authCtx *authorization.Context, user *models.
 		return
 	}
 
-	// Make first user an admin
-	if user.ID == 0 {
-		// TODO
-	}
-
 	fcerr = trans.Commit()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
+
+	count, fcerr := mgr.CountUsers(authorization.NewSystem())
+	if fcerr == nil && count == 1 {
+		isAdmin := true
+		user, fcerr = mgr.UpdateUser(authorization.NewSystem(), user.ID, &models.UserUpdate{IsAdmin: &isAdmin})
+		if fcerr != nil {
+			logrus.WithError(fcerr).Error("Failed to set first user an admin - ignore for now")
+			fcerr = nil
+		}
+	} else if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to count users to determine whether created user should be an admin")
+	}
+
 	return mgr.createNewSession(user.ID)
 }
 
@@ -193,7 +201,60 @@ func (mgr *authManager) GetUserByID(authCtx *authorization.Context, userID model
 		logrus.WithError(fcerr).Error("Failed to get user")
 		return
 	}
-	user.Password = ""
+	if authCtx.Type != authorization.ContextTypeSystem {
+		user.Password = ""
+	}
+
+	return
+}
+
+func (mgr *authManager) UpdateUser(authCtx *authorization.Context, userID models.UserID, updateUser *models.UserUpdate) (user *models.User, fcerr *fcerror.Error) {
+	// TODO: Input Validation
+
+	fcerr = authorization.EnforceSelf(authCtx, userID)
+	if fcerr != nil {
+		return
+	}
+
+	user, fcerr = mgr.GetUserByID(authCtx, userID)
+	if fcerr != nil {
+		return
+	}
+
+	if updateUser.FirstName != nil {
+		user.FirstName = *updateUser.FirstName
+	}
+	if updateUser.LastName != nil {
+		user.LastName = *updateUser.LastName
+	}
+	if updateUser.Email != nil {
+		user.Email = *updateUser.Email
+	}
+	if updateUser.Password != nil {
+		hashedPassword, err := utils.HashScrypt(*updateUser.Password)
+		if err != nil {
+			fcerr = fcerror.NewError(fcerror.ErrPasswordHashingFailed, err)
+			logrus.WithError(err).WithField("userID", userID).Error("Failed to hash password for UpdateUser")
+			return
+		}
+		user.Password = hashedPassword
+	}
+	if updateUser.IsAdmin != nil && authorization.EnforceAdmin(authCtx) == nil {
+		user.IsAdmin = *updateUser.IsAdmin
+	}
+
+	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+	defer func() { fcerr = trans.Finish(fcerr) }()
+
+	fcerr = trans.UpdateUser(user)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": userID, "updateUser": updateUser}).Error("Failed to update user")
+		return
+	}
 
 	return
 }
@@ -217,7 +278,26 @@ func (mgr *authManager) VerifyToken(token models.Token) (user *models.User, fcer
 		return
 	}
 
-	return mgr.GetUserByID(authorization.NewSystem(), session.UserID)
+	return mgr.GetUserByID(authorization.NewUser(&models.User{ID: session.UserID}), session.UserID)
+}
+
+func (mgr *authManager) CountUsers(authCtx *authorization.Context) (count int64, fcerr *fcerror.Error) {
+	fcerr = authorization.EnforceAdmin(authCtx)
+	if fcerr != nil {
+		return
+	}
+
+	trans, fcerr := mgr.userPersistence.StartReadTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+	}
+	defer trans.Close()
+
+	count, fcerr = trans.CountUsers()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to count users")
+	}
+	return
 }
 
 func (mgr *authManager) createNewSession(userID models.UserID) (session *models.Session, fcerr *fcerror.Error) {

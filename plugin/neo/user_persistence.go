@@ -43,6 +43,25 @@ type userReadTransaction struct {
 	*transactionCtx
 }
 
+func (tx *userReadTransaction) CountUsers() (count int64, fcerr *fcerror.Error) {
+	record, err := neo4j.Single(tx.neoTx.Run(`
+		MATCH (u:User)
+		RETURN COUNT(u) as count
+	`, nil))
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrUserNotFound, fcerror.ErrUnknown)
+		return
+	}
+
+	countInt, ok := record.Get("count")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("count not found in records"))
+		return
+	}
+	count = countInt.(int64)
+	return
+}
+
 func (tx *userReadTransaction) GetUserByID(userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
 		MATCH (u:User)
@@ -116,5 +135,28 @@ func (tx *userReadWriteTransaction) SaveUser(user *models.User) (fcerr *fcerror.
 	}
 	user.ID = models.UserID(userIDInt.(int64))
 
+	return
+}
+
+func (tx *userReadWriteTransaction) UpdateUser(user *models.User) (fcerr *fcerror.Error) {
+	currTime := utils.GetCurrentTime()
+	user.Updated = currTime
+
+	result, err := tx.neoTx.Run(`
+		MATCH (u:User)
+		WHERE ID(u) = $id
+		SET u += $user
+		`,
+		map[string]interface{}{
+			"id":   user.ID,
+			"user": modelToMap(user),
+		})
+	if err == nil {
+		_, err = result.Consume()
+	}
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
+		return
+	}
 	return
 }
