@@ -22,6 +22,18 @@ func createTrCtxMock(mockCtrl *gomock.Controller) (trCtx *transactionCtx, sessio
 	return
 }
 
+func setupMockNewTransactionContext(mockCtrl *gomock.Controller, accessMode neo4j.AccessMode) (sessionMock *mock.MockSession, txMock *mock.MockTransaction) {
+	txMock = mock.NewMockTransaction(mockCtrl)
+
+	sessionMock = mock.NewMockSession(mockCtrl)
+	sessionMock.EXPECT().BeginTransaction(gomock.Any()).Return(txMock, nil).Times(1)
+
+	neoMock := mock.NewMockDriver(mockCtrl)
+	neoMock.EXPECT().Session(accessMode).Return(sessionMock, nil).Times(1)
+	neo = neoMock
+	return
+}
+
 type testModel struct {
 	Prop1   string `json:"prop1"`
 	Prop2   string `json:"prop2" fc_neo:"changed2"`
@@ -192,14 +204,7 @@ func TestNewTransactionContext(t *testing.T) {
 
 	inputAccessMode := neo4j.AccessModeWrite
 
-	txMock := mock.NewMockTransaction(mockCtrl)
-
-	sessionMock := mock.NewMockSession(mockCtrl)
-	sessionMock.EXPECT().BeginTransaction(gomock.Any()).Return(txMock, nil).Times(1)
-
-	neoMock := mock.NewMockDriver(mockCtrl)
-	neoMock.EXPECT().Session(inputAccessMode).Return(sessionMock, nil).Times(1)
-	neo = neoMock
+	sessionMock, txMock := setupMockNewTransactionContext(mockCtrl, inputAccessMode)
 	defer func() { neo = nil }()
 
 	txCtx, fcerr := newTransactionContext(inputAccessMode)
@@ -285,6 +290,54 @@ func TestInsertConfig(t *testing.T) {
 			txMock.EXPECT().Run(gomock.Any(), gomock.Any()).Return(mockResult, test.runErr).Times(1)
 
 			insertConfig(trCtx, test.variant, "label", "property")
+		})
+	}
+}
+
+func TestFetchNeoEdition(t *testing.T) {
+	tests := []struct {
+		name            string
+		dbEdition       string
+		expectedEdition NeoEdition
+		dbErr           error
+		recordSuccess   bool
+	}{
+		{name: "enterprise", dbEdition: "enterprise", expectedEdition: NeoEditionEnterprise, dbErr: nil, recordSuccess: true},
+		{name: "community", dbEdition: "community", expectedEdition: NeoEditionCommunity, dbErr: nil, recordSuccess: true},
+		{name: "unknown", dbEdition: "unknown", expectedEdition: NeoEditionCommunity, dbErr: nil, recordSuccess: true},
+		{name: "enterprise db err", dbEdition: "unknown", expectedEdition: NeoEditionCommunity, dbErr: errors.New("Some error"), recordSuccess: true},
+		{name: "enterprise record err", dbEdition: "unknown", expectedEdition: NeoEditionCommunity, dbErr: nil, recordSuccess: false},
+	}
+
+	for it := range tests {
+		test := tests[it]
+		t.Run(test.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockRecord := mock.NewMockRecord(mockCtrl)
+			mockResult := mock.NewMockResult(mockCtrl)
+			if test.dbErr == nil {
+				mockRecord.EXPECT().Get("edition").Return(test.dbEdition, test.recordSuccess).Times(1)
+				gomock.InOrder(
+					mockResult.EXPECT().Next().Return(true).Times(1),
+					mockResult.EXPECT().Record().Return(mockRecord).Times(1),
+					mockResult.EXPECT().Err().Return(nil).Times(1),
+					mockResult.EXPECT().Next().Return(false).Times(1),
+				)
+			}
+
+			sessionMock, txMock := setupMockNewTransactionContext(mockCtrl, neo4j.AccessModeRead)
+			sessionMock.EXPECT().Close().Return(nil).Times(1)
+			txMock.EXPECT().Run(gomock.Any(), gomock.Any()).Return(mockResult, test.dbErr).Times(1)
+
+			actualEdition, fcerr := fetchNeoEdition()
+			if test.dbErr == nil && test.recordSuccess {
+				assert.Equal(t, test.expectedEdition, actualEdition, "Got wrong neo edition")
+			} else {
+				assert.NotNil(t, fcerr, "Missing error for failed fetch neo edition")
+				assert.Equal(t, fcerror.ErrDBReadFailed, fcerr.ID, "Got wrong error for failed neo edition fetch")
+			}
 		})
 	}
 }
