@@ -16,7 +16,7 @@ import (
 
 func init() {
 	persistence.RegisterUserPersistenceController(config.NeoPersistenceKey, &UserPersistence{})
-	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "User", model: &models.User{}})
+	nodeModelMappings = append(nodeModelMappings, &labelModelMapping{label: "User", model: &models.User{}})
 }
 
 type UserPersistence struct{}

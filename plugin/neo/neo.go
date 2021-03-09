@@ -156,7 +156,7 @@ type labelModelMapping struct {
 }
 
 // List of labels mapped to models filled in 'init' functions of each repository
-var labelModelMappings []*labelModelMapping
+var nodeModelMappings []*labelModelMapping
 
 func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 	neoEdition, fcerr := fetchNeoEdition()
@@ -169,7 +169,7 @@ func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 		return
 	}
 
-	for _, constraint := range labelModelMappings {
+	for _, constraint := range nodeModelMappings {
 		modelValue := reflect.ValueOf(constraint.model).Elem()
 		modelType := modelValue.Type()
 
@@ -305,6 +305,12 @@ func recordToModel(record neo4j.Record, key string, model interface{}) *fcerror.
 		switch valField.Type() {
 		case reflect.TypeOf((models.Token)("")):
 			propVal = reflect.ValueOf(models.Token(propInt.(string)))
+		case reflect.TypeOf((models.NodeMimeType)("")):
+			propVal = reflect.ValueOf(models.NodeMimeType(propInt.(string)))
+		case reflect.TypeOf((models.NodeType)(0)):
+			propVal = reflect.ValueOf(models.NodeType(propInt.(int)))
+		case reflect.TypeOf((models.ShareMode)(0)):
+			propVal = reflect.ValueOf(models.ShareMode(propInt.(int)))
 		default:
 			propVal = reflect.ValueOf(propInt)
 		}

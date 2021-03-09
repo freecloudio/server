@@ -15,7 +15,7 @@ import (
 
 func init() {
 	persistence.RegisterAuthPersistenceController(config.NeoPersistenceKey, &AuthPersistence{})
-	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "Session", model: &models.Session{}})
+	nodeModelMappings = append(nodeModelMappings, &labelModelMapping{label: "Session", model: &models.Session{}})
 }
 
 type AuthPersistence struct{}
