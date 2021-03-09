@@ -49,7 +49,7 @@ func TestLoginEndpoint(t *testing.T) {
 
 			resp, err := http.Post(fmt.Sprintf("%s/api/auth/login", testSrv.URL), "application/json", strings.NewReader(test.input))
 
-			assert.Nil(t, err, "Error calling login endpoint")
+			require.Nil(t, err, "Error calling login endpoint")
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Login endpoint does not return expected status")
 		})
 	}

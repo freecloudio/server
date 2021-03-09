@@ -72,7 +72,7 @@ func (r *Router) getUserByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusFound, user)
+	c.JSON(http.StatusOK, user)
 }
 
 func extractUserID(c *gin.Context) (userID models.UserID, err error) {
