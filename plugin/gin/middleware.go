@@ -4,9 +4,9 @@ import (
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models"
-	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 const (

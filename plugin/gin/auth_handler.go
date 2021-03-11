@@ -6,6 +6,7 @@ import (
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

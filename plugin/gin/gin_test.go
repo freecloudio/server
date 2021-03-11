@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/freecloudio/server/mock"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )

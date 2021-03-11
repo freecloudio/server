@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/freecloudio/server/application/manager"
-	"github.com/sirupsen/logrus"
-
 	"github.com/freecloudio/server/plugin/gin"
 	"github.com/freecloudio/server/plugin/neo"
 	_ "github.com/freecloudio/server/plugin/neo"
 	"github.com/freecloudio/server/plugin/viperplg"
+
+	"github.com/sirupsen/logrus"
 )
 
 func main() {

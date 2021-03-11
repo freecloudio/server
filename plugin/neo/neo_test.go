@@ -10,6 +10,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
+
 	"github.com/golang/mock/gomock"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/stretchr/testify/assert"

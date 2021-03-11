@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/freecloudio/server/utils"
+
 	"github.com/stretchr/testify/assert"
 )
 
