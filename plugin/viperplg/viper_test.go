@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/plugin/viperplg"
 
 	"github.com/stretchr/testify/assert"
@@ -29,8 +28,6 @@ func TestSetCorrectArgsAndRead(t *testing.T) {
 
 	assert.Equal(t, sessionTokenLength, cfg.GetSessionTokenLength(), "Expect given token length to match parsed one")
 	assert.Equal(t, time.Duration(sessionExpiration)*time.Hour, cfg.GetSessionExpirationDuration(), "Expect given token expiration to match parsed one")
-	assert.Equal(t, config.NeoPersistenceKey, cfg.GetUserPersistencePluginKey(), "Expect not set config to have default")
-	assert.Equal(t, config.NeoPersistenceKey, cfg.GetAuthPersistencePluginKey(), "Expect not set config to have default")
 	assert.Equal(t, time.Hour, cfg.GetSessionCleanupInterval(), "Expect not set config to have default")
 }
 

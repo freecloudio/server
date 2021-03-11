@@ -21,11 +21,11 @@ type AuthManager interface {
 	Close()
 }
 
-func NewAuthManager(cfg config.Config) AuthManager {
+func NewAuthManager(cfg config.Config, userPersistence persistence.UserPersistenceController, authPersistence persistence.AuthPersistenceController) AuthManager {
 	authMgr := &authManager{
 		cfg:             cfg,
-		userPersistence: persistence.GetUserPersistenceController(cfg),
-		authPersistence: persistence.GetAuthPersistenceController(cfg),
+		userPersistence: userPersistence,
+		authPersistence: authPersistence,
 		done:            make(chan struct{}),
 	}
 	go authMgr.cleanupExpiredSessionsRoutine()
@@ -68,7 +68,7 @@ func (mgr *authManager) cleanupExpiredSessions() {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
-	defer func() { trans.Finish(fcerr) }()
+	defer func() { _ = trans.Finish(fcerr) }()
 
 	fcerr = trans.DeleteExpiredSessions()
 	if fcerr != nil {

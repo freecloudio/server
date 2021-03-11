@@ -4,16 +4,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/freecloudio/server/application/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 const (
-	keyUserPersistencePlugin = "persistence.user.plugin"
-	keyAuthPersistencePlugin = "persistence.auth.plugin"
-
 	keyAuthSessionTokenLength     = "auth.session.token.length"
 	keyAuthSessionExpiration      = "auth.session.expiration"
 	keyAuthSessionCleanupInterval = "auth.session.cleanup.interval"
@@ -26,9 +22,6 @@ type ViperConfig struct {
 func InitViperConfig() *ViperConfig {
 	v := viper.New()
 	p := pflag.NewFlagSet("freecloud-server", pflag.ExitOnError)
-
-	p.String(keyUserPersistencePlugin, string(config.NeoPersistenceKey), "Key of the persistence plugin to use for user management")
-	p.String(keyAuthPersistencePlugin, string(config.NeoPersistenceKey), "Key of the persistence plugin to use for auth management")
 
 	p.Int(keyAuthSessionTokenLength, 32, "Length of the token used for authentication")
 	p.Int(keyAuthSessionExpiration, 24, "Time a session is valid in hours")
@@ -48,14 +41,6 @@ func InitViperConfig() *ViperConfig {
 	}
 
 	return &ViperConfig{v}
-}
-
-func (cfg *ViperConfig) GetUserPersistencePluginKey() config.PersistencePluginKey {
-	return config.PersistencePluginKey(cfg.viper.GetString(keyUserPersistencePlugin))
-}
-
-func (cfg *ViperConfig) GetAuthPersistencePluginKey() config.PersistencePluginKey {
-	return config.PersistencePluginKey(cfg.viper.GetString(keyAuthPersistencePlugin))
 }
 
 func (cfg *ViperConfig) GetSessionTokenLength() int {

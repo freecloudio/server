@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
@@ -15,13 +14,30 @@ import (
 )
 
 func init() {
-	persistence.RegisterUserPersistenceController(config.NeoPersistenceKey, &UserPersistence{})
 	nodeModelMappings = append(nodeModelMappings, &labelModelMapping{label: "User", model: &models.User{}})
 }
 
 type UserPersistence struct{}
 
-func (up *UserPersistence) StartReadTransaction() (tx persistence.UserPersistenceReadTransaction, fcerr *fcerror.Error) {
+func CreateUserPersistence() (userPersistence *UserPersistence, fcerr *fcerror.Error) {
+	if neo == nil {
+		fcerr = initializeNeo()
+		if fcerr != nil {
+			return
+		}
+	}
+	userPersistence = &UserPersistence{}
+	return
+}
+
+func (*UserPersistence) Close() *fcerror.Error {
+	if neo != nil {
+		return closeNeo()
+	}
+	return nil
+}
+
+func (*UserPersistence) StartReadTransaction() (tx persistence.UserPersistenceReadTransaction, fcerr *fcerror.Error) {
 	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create neo read transaction")
@@ -30,7 +46,7 @@ func (up *UserPersistence) StartReadTransaction() (tx persistence.UserPersistenc
 	return &userReadTransaction{txCtx}, nil
 }
 
-func (up *UserPersistence) StartReadWriteTransaction() (tx persistence.UserPersistenceReadWriteTransaction, fcerr *fcerror.Error) {
+func (*UserPersistence) StartReadWriteTransaction() (tx persistence.UserPersistenceReadWriteTransaction, fcerr *fcerror.Error) {
 	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create neo write transaction")

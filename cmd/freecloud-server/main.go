@@ -9,24 +9,28 @@ import (
 	"time"
 
 	"github.com/freecloudio/server/application/manager"
-	"github.com/freecloudio/server/application/persistence"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freecloudio/server/plugin/gin"
+	"github.com/freecloudio/server/plugin/neo"
 	_ "github.com/freecloudio/server/plugin/neo"
 	"github.com/freecloudio/server/plugin/viperplg"
 )
 
 func main() {
-	fcerr := persistence.InitializeUsedPlugins()
+	authPersistence, fcerr := neo.CreateAuthPersistence()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Fatal("Failed to initialize a persistence plugin - abort")
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
+	}
+	userPersistence, fcerr := neo.CreateUserPersistence()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
 	}
 
 	cfg := viperplg.InitViperConfig()
 
-	authMgr := manager.NewAuthManager(cfg)
-	userMgr := manager.NewUserManager(cfg)
+	authMgr := manager.NewAuthManager(cfg, userPersistence, authPersistence)
+	userMgr := manager.NewUserManager(cfg, userPersistence)
 
 	router := gin.NewRouter(authMgr, userMgr, ":8080")
 
@@ -48,7 +52,15 @@ func main() {
 		logrus.WithError(err).Error("Server forced to shutdown")
 	}
 
-	persistence.CloseUsedPlugins()
-	authMgr.Close()
 	userMgr.Close()
+	authMgr.Close()
+
+	fcerr = userPersistence.Close()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to close neo auth persistence plugin")
+	}
+	fcerr = authPersistence.Close()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to close neo auth persistence plugin")
+	}
 }

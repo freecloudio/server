@@ -1,11 +1,8 @@
 package persistence
 
 import (
-	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
-
-	"github.com/sirupsen/logrus"
 )
 
 type UserPersistenceController interface {
@@ -25,19 +22,4 @@ type UserPersistenceReadWriteTransaction interface {
 	UserPersistenceReadTransaction
 	SaveUser(*models.User) *fcerror.Error
 	UpdateUser(*models.User) *fcerror.Error
-}
-
-var userPersistenceController = map[config.PersistencePluginKey]UserPersistenceController{}
-
-func RegisterUserPersistenceController(persistencePluginKey config.PersistencePluginKey, controller UserPersistenceController) {
-	userPersistenceController[persistencePluginKey] = controller
-	markPluginUsed(persistencePluginKey)
-}
-
-func GetUserPersistenceController(cfg config.Config) UserPersistenceController {
-	if ctrl, ok := userPersistenceController[cfg.GetUserPersistencePluginKey()]; ok {
-		return ctrl
-	}
-	logrus.Fatal("No UserPersistenceController registered")
-	return nil
 }

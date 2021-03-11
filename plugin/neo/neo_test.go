@@ -70,7 +70,7 @@ func TestCloseNeo(t *testing.T) {
 	neo = neoMock
 	defer func() { neo = nil }()
 
-	fcerr := CloseNeo()
+	fcerr := closeNeo()
 	assert.Nil(t, fcerr, "Closing neo driver failed")
 }
 
@@ -83,7 +83,7 @@ func TestCloseNeoError(t *testing.T) {
 	neo = neoMock
 	defer func() { neo = nil }()
 
-	fcerr := CloseNeo()
+	fcerr := closeNeo()
 	assert.NotNil(t, fcerr, "Closing neo driver succeed but should fail")
 	assert.Equal(t, fcerror.ErrDBCloseFailed, fcerr.ID, "Wrong error id for failed db close")
 }

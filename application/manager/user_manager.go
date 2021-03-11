@@ -18,10 +18,10 @@ type UserManager interface {
 	Close()
 }
 
-func NewUserManager(cfg config.Config) UserManager {
+func NewUserManager(cfg config.Config, userPersistence persistence.UserPersistenceController) UserManager {
 	userMgr := &userManager{
 		cfg:             cfg,
-		userPersistence: persistence.GetUserPersistenceController(cfg),
+		userPersistence: userPersistence,
 		done:            make(chan struct{}),
 	}
 
@@ -83,8 +83,10 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 	count, fcerr := mgr.CountUsers(authorization.NewSystem())
 	if fcerr == nil && count == 1 {
 		isAdmin := true
-		user, fcerr = mgr.UpdateUser(authorization.NewSystem(), user.ID, &models.UserUpdate{IsAdmin: &isAdmin})
-		if fcerr != nil {
+		_, fcerr = mgr.UpdateUser(authorization.NewSystem(), user.ID, &models.UserUpdate{IsAdmin: &isAdmin})
+		if fcerr == nil {
+			user.IsAdmin = true
+		} else {
 			logrus.WithError(fcerr).Error("Failed to set first user an admin - ignore for now")
 			fcerr = nil
 		}

@@ -7,21 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/freecloudio/server/application/config"
-	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
 )
-
-func init() {
-	persistence.RegisterPluginInitialization(config.NeoPersistenceKey, persistence.PluginLifecycleFuncs{
-		InitializationFunc: InitializeNeo,
-		CloseFunc:          CloseNeo,
-	})
-}
 
 var neo neo4j.Driver
 
@@ -40,7 +31,7 @@ const (
 	NeoConfigIndex
 )
 
-func InitializeNeo() (fcerr *fcerror.Error) {
+func initializeNeo() (fcerr *fcerror.Error) {
 	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), setConfig)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBInitializationFailed, err)
@@ -63,7 +54,7 @@ func InitializeNeo() (fcerr *fcerror.Error) {
 	return
 }
 
-func CloseNeo() (fcerr *fcerror.Error) {
+func closeNeo() (fcerr *fcerror.Error) {
 	err := neo.Close()
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBCloseFailed, nil)
