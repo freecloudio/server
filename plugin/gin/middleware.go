@@ -31,7 +31,7 @@ func getAuthContext(c *gin.Context) *authorization.Context {
 	return authContext
 }
 
-func getAuthMiddleware(authMgr manager.AuthManager) gin.HandlerFunc {
+func getAuthMiddleware(authMgr manager.AuthManager, userMgr manager.UserManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authContext *authorization.Context
 
@@ -40,7 +40,11 @@ func getAuthMiddleware(authMgr manager.AuthManager) gin.HandlerFunc {
 			authContext = authorization.NewAnonymous()
 		} else {
 			tokenString := models.Token(authHeader[len(authPrefix):])
-			user, fcerr := authMgr.VerifyToken(tokenString)
+			session, fcerr := authMgr.VerifyToken(tokenString)
+			var user *models.User
+			if fcerr == nil {
+				user, fcerr = userMgr.GetUserByID(authorization.NewUser(&models.User{ID: session.UserID}), session.UserID)
+			}
 			if fcerr == nil {
 				authContext = authorization.NewUser(user)
 				c.Set(authTokenKey, tokenString)

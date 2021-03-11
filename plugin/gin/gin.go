@@ -14,18 +14,20 @@ import (
 type Router struct {
 	engine  *gin.Engine
 	authMgr manager.AuthManager
+	userMgr manager.UserManager
 	srv     *http.Server
 }
 
-func NewRouter(authMgr manager.AuthManager, addr string) (router *Router) {
+func NewRouter(authMgr manager.AuthManager, userMgr manager.UserManager, addr string) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
-	ginRouter.Use(getAuthMiddleware(authMgr))
+	ginRouter.Use(getAuthMiddleware(authMgr, userMgr))
 
 	router = &Router{
 		engine:  ginRouter,
 		authMgr: authMgr,
+		userMgr: userMgr,
 		srv: &http.Server{
 			Addr:    ":8080",
 			Handler: ginRouter,

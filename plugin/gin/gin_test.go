@@ -11,15 +11,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//go:generate mockgen -destination ../../mock/auth_manager.go -package mock github.com/freecloudio/server/application/manager AuthManager
+//go:generate mockgen -destination ../../mock/auth_manager.go -package mock github.com/freecloudio/server/application/manager AuthManager,UserManager
 
 func TestNewRouter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
+	mockUserMgr := mock.NewMockUserManager(mockCtrl)
 
-	router := NewRouter(mockAuthMgr, ":8080")
+	router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
 
 	assert.NotNil(t, router.engine, "Router engine is nil")
 	assert.NotNil(t, router.srv, "Router srv is nil")
@@ -31,8 +32,9 @@ func TestHealthEndpoint(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
+	mockUserMgr := mock.NewMockUserManager(mockCtrl)
 
-	router := NewRouter(mockAuthMgr, ":8080")
+	router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
 
 	testSrv := httptest.NewServer(router.engine)
 	defer testSrv.Close()

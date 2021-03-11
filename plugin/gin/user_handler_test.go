@@ -35,13 +35,15 @@ func TestRegisterUserEndpoint(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
+			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success && test.willCallRegister {
-				mockAuthMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(&models.Session{}, nil).Times(1)
+				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockAuthMgr.EXPECT().CreateNewSession(gomock.Any()).Return(&models.Session{}, nil).Times(1)
 			} else if test.willCallRegister {
-				mockAuthMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
+				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, ":8080")
+			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -77,13 +79,15 @@ func TestGetOwnUserEndpoint(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
+			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success {
-				mockAuthMgr.EXPECT().VerifyToken(good).Return(&models.User{}, nil).Times(1)
+				mockAuthMgr.EXPECT().VerifyToken(good).Return(&models.Session{UserID: 1}, nil).Times(1)
+				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), models.UserID(1)).Return(&models.User{}, nil).Times(1)
 			} else {
 				mockAuthMgr.EXPECT().VerifyToken(bad).Return(nil, fcerror.NewError(fcerror.ErrUnauthorized, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, ":8080")
+			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -120,13 +124,14 @@ func TestGetUserByIDEndpoint(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
+			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success && test.inputID != models.UserID(0) {
-				mockAuthMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(&models.User{}, nil).Times(1)
+				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(&models.User{}, nil).Times(1)
 			} else if test.inputID != models.UserID(0) {
-				mockAuthMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
+				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, ":8080")
+			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()

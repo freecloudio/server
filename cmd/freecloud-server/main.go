@@ -26,8 +26,9 @@ func main() {
 	cfg := viperplg.InitViperConfig()
 
 	authMgr := manager.NewAuthManager(cfg)
+	userMgr := manager.NewUserManager(cfg)
 
-	router := gin.NewRouter(authMgr, ":8080")
+	router := gin.NewRouter(authMgr, userMgr, ":8080")
 
 	go func() {
 		if err := router.Serve(); err != nil && err != http.ErrServerClosed {
@@ -48,4 +49,6 @@ func main() {
 	}
 
 	persistence.CloseUsedPlugins()
+	authMgr.Close()
+	userMgr.Close()
 }

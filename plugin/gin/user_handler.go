@@ -34,7 +34,13 @@ func (r *Router) registerUser(c *gin.Context) {
 		return
 	}
 
-	token, fcerr := r.authMgr.CreateUser(authContext, user)
+	fcerr := r.userMgr.CreateUser(authContext, user)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	token, fcerr := r.authMgr.CreateNewSession(user.ID)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
@@ -66,7 +72,7 @@ func (r *Router) getUserByID(c *gin.Context) {
 		return
 	}
 
-	user, fcerr := r.authMgr.GetUserByID(authContext, userID)
+	user, fcerr := r.userMgr.GetUserByID(authContext, userID)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
