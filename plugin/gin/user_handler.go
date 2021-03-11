@@ -34,19 +34,13 @@ func (r *Router) registerUser(c *gin.Context) {
 		return
 	}
 
-	fcerr := r.userMgr.CreateUser(authContext, user)
+	session, fcerr := r.userMgr.CreateUser(authContext, user)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
 
-	token, fcerr := r.authMgr.CreateNewSession(user.ID)
-	if fcerr != nil {
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	c.JSON(http.StatusCreated, token)
+	c.JSON(http.StatusCreated, session)
 }
 
 func (r *Router) getOwnUser(c *gin.Context) {

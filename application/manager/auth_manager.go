@@ -3,6 +3,7 @@ package manager
 import (
 	"time"
 
+	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
@@ -21,22 +22,23 @@ type AuthManager interface {
 	Close()
 }
 
-func NewAuthManager(cfg config.Config, userPersistence persistence.UserPersistenceController, authPersistence persistence.AuthPersistenceController) AuthManager {
+func NewAuthManager(cfg config.Config, authPersistence persistence.AuthPersistenceController, managers *Managers) AuthManager {
 	authMgr := &authManager{
 		cfg:             cfg,
-		userPersistence: userPersistence,
 		authPersistence: authPersistence,
+		managers:        managers,
 		done:            make(chan struct{}),
 	}
 	go authMgr.cleanupExpiredSessionsRoutine()
 
+	managers.Auth = authMgr
 	return authMgr
 }
 
 type authManager struct {
 	cfg             config.Config
-	userPersistence persistence.UserPersistenceController
 	authPersistence persistence.AuthPersistenceController
+	managers        *Managers
 	done            chan struct{}
 }
 
@@ -78,14 +80,7 @@ func (mgr *authManager) cleanupExpiredSessions() {
 }
 
 func (mgr *authManager) Login(email, password string) (token *models.Session, fcerr *fcerror.Error) {
-	trans, fcerr := mgr.userPersistence.StartReadTransaction()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
-		return
-	}
-	defer trans.Close()
-
-	user, fcerr := trans.GetUserByEmail(email)
+	user, fcerr := mgr.managers.User.GetUserByEmail(authorization.NewSystem(), email)
 	if fcerr != nil {
 		logrus.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)

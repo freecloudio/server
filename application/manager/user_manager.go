@@ -11,31 +11,35 @@ import (
 )
 
 type UserManager interface {
-	CreateUser(authCtx *authorization.Context, user *models.User) *fcerror.Error
+	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Session, *fcerror.Error)
 	GetUserByID(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
+	GetUserByEmail(authCtx *authorization.Context, email string) (*models.User, *fcerror.Error)
 	UpdateUser(authCtx *authorization.Context, userID models.UserID, updateUser *models.UserUpdate) (*models.User, *fcerror.Error)
 	CountUsers(authCtx *authorization.Context) (int64, *fcerror.Error)
 	Close()
 }
 
-func NewUserManager(cfg config.Config, userPersistence persistence.UserPersistenceController) UserManager {
+func NewUserManager(cfg config.Config, userPersistence persistence.UserPersistenceController, managers *Managers) UserManager {
 	userMgr := &userManager{
 		cfg:             cfg,
 		userPersistence: userPersistence,
+		managers:        managers,
 	}
 
+	managers.User = userMgr
 	return userMgr
 }
 
 type userManager struct {
 	cfg             config.Config
 	userPersistence persistence.UserPersistenceController
+	managers        *Managers
 }
 
 func (mgr *userManager) Close() {
 }
 
-func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.User) (fcerr *fcerror.Error) {
+func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.User) (session *models.Session, fcerr *fcerror.Error) {
 	// TODO: Input Validation
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
@@ -92,7 +96,7 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 		fcerr = nil
 	}
 
-	return
+	return mgr.managers.Auth.CreateNewSession(user.ID)
 }
 
 func (mgr *userManager) GetUserByID(authCtx *authorization.Context, userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
@@ -113,6 +117,33 @@ func (mgr *userManager) GetUserByID(authCtx *authorization.Context, userID model
 		logrus.WithError(fcerr).Error("Failed to get user")
 		return
 	}
+	if authCtx.Type != authorization.ContextTypeSystem {
+		user.Password = ""
+	}
+
+	return
+}
+
+func (mgr *userManager) GetUserByEmail(authCtx *authorization.Context, email string) (user *models.User, fcerr *fcerror.Error) {
+	trans, fcerr := mgr.userPersistence.StartReadTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+	defer trans.Close()
+
+	user, fcerr = trans.GetUserByEmail(email)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
+		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
+		return
+	}
+
+	fcerr = authorization.EnforceSelf(authCtx, user.ID)
+	if fcerr != nil {
+		return
+	}
+
 	if authCtx.Type != authorization.ContextTypeSystem {
 		user.Password = ""
 	}

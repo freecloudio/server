@@ -26,11 +26,17 @@ func main() {
 	}
 	userPersistence, fcerr := neo.CreateUserPersistence(cfg)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo user persistence plugin - abort")
+	}
+	filePersistence, fcerr := neo.CreateFilePersistence(cfg)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo file persistence plugin - abort")
 	}
 
-	authMgr := manager.NewAuthManager(cfg, userPersistence, authPersistence)
-	userMgr := manager.NewUserManager(cfg, userPersistence)
+	managers := &manager.Managers{}
+	authMgr := manager.NewAuthManager(cfg, authPersistence, managers)
+	userMgr := manager.NewUserManager(cfg, userPersistence, managers)
+	fileMgr := manager.NewFileManager(cfg, filePersistence, managers)
 
 	router := gin.NewRouter(authMgr, userMgr, ":8080")
 
@@ -52,12 +58,17 @@ func main() {
 		logrus.WithError(err).Error("Server forced to shutdown")
 	}
 
+	fileMgr.Close()
 	userMgr.Close()
 	authMgr.Close()
 
+	fcerr = filePersistence.Close()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to close neo file persistence plugin")
+	}
 	fcerr = userPersistence.Close()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to close neo auth persistence plugin")
+		logrus.WithError(fcerr).Error("Failed to close neo user persistence plugin")
 	}
 	fcerr = authPersistence.Close()
 	if fcerr != nil {

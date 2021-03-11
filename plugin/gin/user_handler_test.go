@@ -37,10 +37,9 @@ func TestRegisterUserEndpoint(t *testing.T) {
 			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
 			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success && test.willCallRegister {
-				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				mockAuthMgr.EXPECT().CreateNewSession(gomock.Any()).Return(&models.Session{}, nil).Times(1)
+				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(&models.Session{}, nil).Times(1)
 			} else if test.willCallRegister {
-				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
+				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
 			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
