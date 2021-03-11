@@ -22,7 +22,6 @@ func NewUserManager(cfg config.Config, userPersistence persistence.UserPersisten
 	userMgr := &userManager{
 		cfg:             cfg,
 		userPersistence: userPersistence,
-		done:            make(chan struct{}),
 	}
 
 	return userMgr
@@ -31,11 +30,9 @@ func NewUserManager(cfg config.Config, userPersistence persistence.UserPersisten
 type userManager struct {
 	cfg             config.Config
 	userPersistence persistence.UserPersistenceController
-	done            chan struct{}
 }
 
 func (mgr *userManager) Close() {
-	mgr.done <- struct{}{}
 }
 
 func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.User) (fcerr *fcerror.Error) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
@@ -19,9 +20,9 @@ func init() {
 
 type UserPersistence struct{}
 
-func CreateUserPersistence() (userPersistence *UserPersistence, fcerr *fcerror.Error) {
+func CreateUserPersistence(cfg config.Config) (userPersistence *UserPersistence, fcerr *fcerror.Error) {
 	if neo == nil {
-		fcerr = initializeNeo()
+		fcerr = initializeNeo(cfg)
 		if fcerr != nil {
 			return
 		}

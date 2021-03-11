@@ -18,16 +18,16 @@ import (
 )
 
 func main() {
-	authPersistence, fcerr := neo.CreateAuthPersistence()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
-	}
-	userPersistence, fcerr := neo.CreateUserPersistence()
-	if fcerr != nil {
-		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
-	}
-
 	cfg := viperplg.InitViperConfig()
+
+	authPersistence, fcerr := neo.CreateAuthPersistence(cfg)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
+	}
+	userPersistence, fcerr := neo.CreateUserPersistence(cfg)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
+	}
 
 	authMgr := manager.NewAuthManager(cfg, userPersistence, authPersistence)
 	userMgr := manager.NewUserManager(cfg, userPersistence)

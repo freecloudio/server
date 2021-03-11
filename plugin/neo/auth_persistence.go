@@ -3,6 +3,7 @@ package neo
 import (
 	"fmt"
 
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
@@ -18,9 +19,9 @@ func init() {
 
 type AuthPersistence struct{}
 
-func CreateAuthPersistence() (authPersistence *AuthPersistence, fcerr *fcerror.Error) {
+func CreateAuthPersistence(cfg config.Config) (authPersistence *AuthPersistence, fcerr *fcerror.Error) {
 	if neo == nil {
-		fcerr = initializeNeo()
+		fcerr = initializeNeo(cfg)
 		if fcerr != nil {
 			return
 		}

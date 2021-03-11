@@ -13,6 +13,10 @@ const (
 	keyAuthSessionTokenLength     = "auth.session.token.length"
 	keyAuthSessionExpiration      = "auth.session.expiration"
 	keyAuthSessionCleanupInterval = "auth.session.cleanup.interval"
+
+	keyDBConnectionUsername = "db.connection.username"
+	keyDBConnectionPassword = "db.connection.password"
+	keyDBConnectionString   = "db.connection.string"
 )
 
 type ViperConfig struct {
@@ -26,6 +30,10 @@ func InitViperConfig() *ViperConfig {
 	p.Int(keyAuthSessionTokenLength, 32, "Length of the token used for authentication")
 	p.Int(keyAuthSessionExpiration, 24, "Time a session is valid in hours")
 	p.Int(keyAuthSessionCleanupInterval, 1, "Interval in which expired sessions will be cleaned in hours")
+
+	p.String(keyDBConnectionUsername, "neo4j", "Username for the database connection")
+	p.String(keyDBConnectionPassword, "freecloud", "Password for the database connection")
+	p.String(keyDBConnectionString, "bolt://localhost:7687", "Connection string for the database")
 
 	p.Parse(os.Args[1:])
 	v.BindPFlags(p)
@@ -53,4 +61,16 @@ func (cfg *ViperConfig) GetSessionExpirationDuration() time.Duration {
 
 func (cfg *ViperConfig) GetSessionCleanupInterval() time.Duration {
 	return time.Duration(cfg.viper.GetInt(keyAuthSessionCleanupInterval)) * time.Hour
+}
+
+func (cfg *ViperConfig) GetDBUsername() string {
+	return cfg.viper.GetString(keyDBConnectionUsername)
+}
+
+func (cfg *ViperConfig) GetDBPassword() string {
+	return cfg.viper.GetString(keyDBConnectionPassword)
+}
+
+func (cfg *ViperConfig) GetDBConnectionString() string {
+	return cfg.viper.GetString(keyDBConnectionString)
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 
@@ -31,8 +32,8 @@ const (
 	NeoConfigIndex
 )
 
-func initializeNeo() (fcerr *fcerror.Error) {
-	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "freecloud", ""), setConfig)
+func initializeNeo(cfg config.Config) (fcerr *fcerror.Error) {
+	driver, err := neo4j.NewDriver(cfg.GetDBConnectionString(), neo4j.BasicAuth(cfg.GetDBUsername(), cfg.GetDBPassword(), ""), setConfig)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBInitializationFailed, err)
 		return
