@@ -28,7 +28,7 @@ func (r *Router) login(c *gin.Context) {
 		return
 	}
 
-	token, fcerr := r.authMgr.Login(user.Email, user.Password)
+	token, fcerr := r.managers.Auth.Login(user.Email, user.Password)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
@@ -43,7 +43,7 @@ func (r *Router) logout(c *gin.Context) {
 	var fcerr *fcerror.Error
 	if tokenInt, ok := c.Get(authTokenKey); authContext.Type == authorization.ContextTypeUser && ok {
 		token := tokenInt.(models.Token)
-		fcerr = r.authMgr.Logout(token)
+		fcerr = r.managers.Auth.Logout(token)
 	} else {
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
 	}

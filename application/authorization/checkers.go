@@ -55,5 +55,3 @@ func EnforceSelf(ctx *Context, targetUserID models.UserID) *fcerror.Error {
 		return errUnauthorized
 	}
 }
-
-// EnforceOwner -> ctx with file, EnforceHasAccess -> ctx with file+bool flag

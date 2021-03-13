@@ -101,8 +101,7 @@ func (tx *userReadTransaction) GetUserByID(userID models.UserID) (user *models.U
 
 func (tx *userReadTransaction) GetUserByEmail(email string) (user *models.User, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-		MATCH (u:User)
-		WHERE u.email = $email
+		MATCH (u:User {email: $email})
 		RETURN u, ID(u) as id
 	`, map[string]interface{}{"email": email}))
 	if err != nil {

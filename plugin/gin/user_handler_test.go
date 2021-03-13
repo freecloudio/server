@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
@@ -35,7 +36,6 @@ func TestRegisterUserEndpoint(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
 			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success && test.willCallRegister {
 				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(&models.Session{}, nil).Times(1)
@@ -43,7 +43,8 @@ func TestRegisterUserEndpoint(t *testing.T) {
 				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+			managers := &manager.Managers{User: mockUserMgr}
+			router := NewRouter(managers, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -87,7 +88,8 @@ func TestGetOwnUserEndpoint(t *testing.T) {
 				mockAuthMgr.EXPECT().VerifyToken(bad).Return(nil, fcerror.NewError(fcerror.ErrUnauthorized, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+			managers := &manager.Managers{User: mockUserMgr, Auth: mockAuthMgr}
+			router := NewRouter(managers, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -123,7 +125,6 @@ func TestGetUserByIDEndpoint(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
 			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success && test.inputID != models.UserID(0) {
 				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(&models.User{}, nil).Times(1)
@@ -131,7 +132,8 @@ func TestGetUserByIDEndpoint(t *testing.T) {
 				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+			managers := &manager.Managers{User: mockUserMgr}
+			router := NewRouter(managers, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()

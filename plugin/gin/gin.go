@@ -13,22 +13,20 @@ import (
 )
 
 type Router struct {
-	engine  *gin.Engine
-	authMgr manager.AuthManager
-	userMgr manager.UserManager
-	srv     *http.Server
+	engine   *gin.Engine
+	managers *manager.Managers
+	srv      *http.Server
 }
 
-func NewRouter(authMgr manager.AuthManager, userMgr manager.UserManager, addr string) (router *Router) {
+func NewRouter(managers *manager.Managers, addr string) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
-	ginRouter.Use(getAuthMiddleware(authMgr, userMgr))
+	ginRouter.Use(getAuthMiddleware(managers.Auth, managers.User))
 
 	router = &Router{
-		engine:  ginRouter,
-		authMgr: authMgr,
-		userMgr: userMgr,
+		engine:   ginRouter,
+		managers: managers,
 		srv: &http.Server{
 			Addr:    ":8080",
 			Handler: ginRouter,
@@ -50,6 +48,7 @@ func (r *Router) Shutdown(ctx context.Context) error {
 func (r *Router) buildRoutes() {
 	r.buildAuthRoutes()
 	r.buildUserRoutes()
+	r.buildNodeRoutes()
 
 	r.engine.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Ok")
@@ -58,11 +57,11 @@ func (r *Router) buildRoutes() {
 
 func errToStatus(fcerr *fcerror.Error) int {
 	switch fcerr.ID {
-	case fcerror.ErrUnauthorized:
+	case fcerror.ErrUnauthorized, fcerror.ErrTokenNotFound:
 		return http.StatusUnauthorized
 	case fcerror.ErrForbidden:
 		return http.StatusForbidden
-	case fcerror.ErrUserNotFound:
+	case fcerror.ErrUserNotFound, fcerror.ErrNodeNotFound:
 		return http.StatusNotFound
 	case fcerror.ErrBadRequest, fcerror.ErrEmailAlreadyRegistered:
 		return http.StatusBadRequest

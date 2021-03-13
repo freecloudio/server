@@ -1,7 +1,7 @@
 package neo
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
@@ -61,8 +61,7 @@ type authReadTransaction struct {
 
 func (tx *authReadTransaction) GetSessionByToken(token models.Token) (session *models.Session, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-		MATCH (s:Session)<-[:AUTHENTICATES_WITH]-(u:User)
-		WHERE s.token = $token
+		MATCH (s:Session {token: $token})<-[:AUTHENTICATES_WITH]-(u:User)
 		RETURN s, ID(u) as user_id
 		`,
 		map[string]interface{}{
@@ -81,12 +80,10 @@ func (tx *authReadTransaction) GetSessionByToken(token models.Token) (session *m
 
 	userIDInt, ok := record.Get("user_id")
 	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("Failed to get user_id of session"))
 		return
 	}
 	session.UserID = models.UserID(userIDInt.(int64))
-
-	tx.neoTx.Close()
 
 	return
 }
@@ -99,7 +96,7 @@ func (tx *authReadWriteTransaction) SaveSession(session *models.Session) *fcerro
 	res, err := tx.neoTx.Run(`
 		MATCH (u:User)
 		WHERE ID(u) = $user_id
-		CREATE (u)-[a:AUTHENTICATES_WITH]->(s:Session $s)
+		CREATE (u)-[:AUTHENTICATES_WITH]->(:Session $s)
 		`,
 		map[string]interface{}{
 			"user_id": session.UserID,
@@ -114,8 +111,7 @@ func (tx *authReadWriteTransaction) SaveSession(session *models.Session) *fcerro
 
 func (tx *authReadWriteTransaction) DeleteSessionByToken(token models.Token) *fcerror.Error {
 	res, err := tx.neoTx.Run(`
-		MATCH (s:Session)
-		WHERE s.token = $token
+		MATCH (s:Session {token: $token})
 		DETACH DELETE s
 		`,
 		map[string]interface{}{

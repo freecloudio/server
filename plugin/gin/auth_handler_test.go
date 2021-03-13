@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
@@ -41,9 +42,9 @@ func TestLoginEndpoint(t *testing.T) {
 			} else if test.willCallLogin {
 				mockAuthMgr.EXPECT().Login(gomock.Any(), gomock.Any()).Return(nil, fcerror.NewError(fcerror.ErrUnauthorized, nil)).Times(1)
 			}
-			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 
-			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+			managers := &manager.Managers{Auth: mockAuthMgr}
+			router := NewRouter(managers, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -94,7 +95,8 @@ func TestLogoutEndpoint(t *testing.T) {
 				mockAuthMgr.EXPECT().VerifyToken(bad).Return(nil, fcerror.NewError(fcerror.ErrUnauthorized, nil)).Times(1)
 			}
 
-			router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+			managers := &manager.Managers{Auth: mockAuthMgr, User: mockUserMgr}
+			router := NewRouter(managers, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()

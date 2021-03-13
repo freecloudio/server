@@ -97,6 +97,11 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 		fcerr = nil
 	}
 
+	fcerr = mgr.managers.Node.CreateUserRootFolder(authorization.NewSystem(), user.ID)
+	if fcerr != nil {
+		return
+	}
+
 	return mgr.managers.Auth.CreateNewSession(user.ID)
 }
 

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/freecloudio/server/mock"
+	"github.com/freecloudio/server/application/manager"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -18,24 +18,19 @@ func TestNewRouter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
-	mockUserMgr := mock.NewMockUserManager(mockCtrl)
-
-	router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+	managers := &manager.Managers{}
+	router := NewRouter(managers, ":8080")
 
 	assert.NotNil(t, router.engine, "Router engine is nil")
 	assert.NotNil(t, router.srv, "Router srv is nil")
-	assert.Equal(t, mockAuthMgr, router.authMgr, "Authmanager is not the inserted mock manager")
+	assert.Equal(t, managers, router.managers, "managers is not the inserted managers")
 }
 
 func TestHealthEndpoint(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
-	mockUserMgr := mock.NewMockUserManager(mockCtrl)
-
-	router := NewRouter(mockAuthMgr, mockUserMgr, ":8080")
+	router := NewRouter(&manager.Managers{}, ":8080")
 
 	testSrv := httptest.NewServer(router.engine)
 	defer testSrv.Close()
