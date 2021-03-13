@@ -295,14 +295,16 @@ func recordToModel(record neo4j.Record, key string, model interface{}) *fcerror.
 		}
 		var propVal reflect.Value
 		switch valField.Type() {
+		case reflect.TypeOf((models.UserID)(0)):
+			propVal = reflect.ValueOf(models.UserID(propInt.(int64)))
 		case reflect.TypeOf((models.Token)("")):
 			propVal = reflect.ValueOf(models.Token(propInt.(string)))
 		case reflect.TypeOf((models.NodeMimeType)("")):
 			propVal = reflect.ValueOf(models.NodeMimeType(propInt.(string)))
 		case reflect.TypeOf((models.NodeType)(0)):
-			propVal = reflect.ValueOf(models.NodeType(propInt.(int)))
+			propVal = reflect.ValueOf(models.NodeType(propInt.(string)))
 		case reflect.TypeOf((models.ShareMode)(0)):
-			propVal = reflect.ValueOf(models.ShareMode(propInt.(int)))
+			propVal = reflect.ValueOf(models.ShareMode(propInt.(string)))
 		default:
 			propVal = reflect.ValueOf(propInt)
 		}

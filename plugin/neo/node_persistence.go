@@ -65,8 +65,8 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
-			WHERE ID(u) = $user_id AND [n in tail(tail(nodes(p))) | n.name] = $path_segments
-			RETURN n, "Folder" IN labels(n) AS is_folder
+			WHERE ID(u) = $user_id AND [n in tail(nodes(p)) | n.name] = $path_segments
+			RETURN n, ID(n) as id, "Folder" IN labels(n) AS is_folder
 		`, len(pathSegments)),
 		map[string]interface{}{
 			"user_id":       userID,
@@ -77,15 +77,56 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 		return
 	}
 
+	nodeIDInt, ok := record.Get("id")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
+		return
+	}
+	nodeID := models.NodeID(nodeIDInt.(int64))
+
+	return tx.fillNodeInfo(record, userID, nodeID, path)
+}
+
+func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
+	record, err := neo4j.Single(tx.neoTx.Run(`
+			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node)
+			WHERE ID(u) = $user_id AND ID(n) = $node_id
+			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(nodes(p)) | s + '/' + n.name) as path
+		`,
+		map[string]interface{}{
+			"user_id": userID,
+			"node_id": nodeID,
+		}))
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
+		return
+	}
+
+	pathInt, ok := record.Get("path")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("path not found in record"))
+		return
+	}
+	path := pathInt.(string)
+
+	return tx.fillNodeInfo(record, userID, nodeID, path)
+}
+
+func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.UserID, nodeID models.NodeID, path string) (node *models.Node, fcerr *fcerror.Error) {
 	node = &models.Node{}
 	fcerr = recordToModel(record, "n", node)
 	if fcerr != nil {
 		return
 	}
 
+	node.ID = nodeID
+	node.Path, _ = utils.SplitPath(path)
+	node.FullPath = path
+	node.PerspectiveUserID = userID
+
 	isFolderInt, ok := record.Get("is_folder")
 	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("Failed to get is_folder of session"))
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("is_folder not found in record"))
 		return
 	}
 	if isFolder := isFolderInt.(bool); isFolder {
@@ -94,11 +135,35 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 		node.Type = models.NodeTypeFile
 	}
 
-	node.Path, _ = utils.SplitPath(path)
-	node.FullPath = path
-	node.PerspectiveUserID = userID
+	node.OwnerID, fcerr = tx.getOwnerOfNodeID(node.ID)
+	if fcerr != nil {
+		return
+	}
 
 	// TODO: Insert ShareMode, Starred
+	return
+}
+
+func (tx *nodeReadTransaction) getOwnerOfNodeID(nodeID models.NodeID) (userID models.UserID, fcerr *fcerror.Error) {
+	record, err := neo4j.Single(tx.neoTx.Run(`
+			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node)
+			WHERE ID(n) = $node_id
+			RETURN ID(u) as id
+		`,
+		map[string]interface{}{
+			"node_id": nodeID,
+		}))
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
+		return
+	}
+
+	userIDInt, ok := record.Get("id")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
+		return
+	}
+	userID = models.UserID(userIDInt.(int64))
 	return
 }
 

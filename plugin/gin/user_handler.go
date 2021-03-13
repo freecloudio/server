@@ -1,7 +1,7 @@
 package gin
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -58,10 +58,9 @@ func (r *Router) getOwnUser(c *gin.Context) {
 func (r *Router) getUserByID(c *gin.Context) {
 	authContext := getAuthContext(c)
 
-	userID, err := extractUserID(c)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to get userID from request")
-		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
+	userID, fcerr := extractUserID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get userID from request")
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
@@ -75,15 +74,16 @@ func (r *Router) getUserByID(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func extractUserID(c *gin.Context) (userID models.UserID, err error) {
+func extractUserID(c *gin.Context) (userID models.UserID, fcerr *fcerror.Error) {
 	userIDStr := c.Param(userIDParam)
 	if userIDStr == "" {
-		err = fmt.Errorf("UserID not found in path params")
+		fcerr = fcerror.NewError(fcerror.ErrBadRequest, errors.New("UserID not found in path param"))
 		return
 	}
 
 	userIDInt, err := strconv.Atoi(userIDStr)
 	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrBadRequest, err)
 		return
 	}
 

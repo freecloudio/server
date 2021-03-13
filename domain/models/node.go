@@ -4,13 +4,13 @@ import (
 	"time"
 )
 
-type NodeType int
 type NodeID int64
+type NodeType string
 type NodeMimeType string
 
 const (
-	NodeTypeFile NodeType = iota
-	NodeTypeFolder
+	NodeTypeFile   NodeType = "FILE"
+	NodeTypeFolder NodeType = "FOLDER"
 )
 
 type Node struct {
@@ -19,10 +19,10 @@ type Node struct {
 	Updated time.Time `json:"updated"`
 
 	Name     string       `json:"name"`
-	OwnerID  UserID       `json:"owner_id"`
 	Size     int64        `json:"size"`
 	MimeType NodeMimeType `json:"mime_type" fc_neo:",optional"`
 
+	OwnerID   UserID    `json:"owner_id" fc_neo:"-"`
 	Type      NodeType  `json:"type" fc_neo:"-"`
 	ShareMode ShareMode `json:"share_mode" fc_neo:"-"`
 	IsStarred bool      `json:"is_starred" fc_neo:"-"`

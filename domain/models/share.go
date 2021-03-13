@@ -1,11 +1,11 @@
 package models
 
-type ShareMode int
+type ShareMode string
 
 const (
-	ShareModeNone ShareMode = iota // Only used in Node struct
-	ShareModeRead
-	ShareModeReadWrite
+	ShareModeNone      ShareMode = "NONE" // Only used in Node struct
+	ShareModeRead      ShareMode = "READ"
+	ShareModeReadWrite ShareMode = "READ_WRITE"
 )
 
 type Share struct {
