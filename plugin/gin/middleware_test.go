@@ -56,15 +56,13 @@ func TestAuthMiddleware(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
-			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.validFormat && test.valid {
-				mockAuthMgr.EXPECT().VerifyToken(good).Return(&models.Session{UserID: 1}, nil).Times(1)
-				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), models.UserID(1)).Return(&models.User{}, nil).Times(1)
+				mockAuthMgr.EXPECT().VerifyToken(good).Return(&models.User{}, nil).Times(1)
 			} else if test.validFormat {
 				mockAuthMgr.EXPECT().VerifyToken(bad).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
-			authMiddleware := getAuthMiddleware(mockAuthMgr, mockUserMgr)
+			authMiddleware := getAuthMiddleware(mockAuthMgr)
 
 			c := &gin.Context{}
 			req, err := http.NewRequest(http.MethodGet, "", nil)

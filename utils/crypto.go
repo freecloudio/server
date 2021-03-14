@@ -37,7 +37,7 @@ func HashScrypt(plaintext string) (hash string, err error) {
 	return fmt.Sprintf("$%s$%d$%d$%d$%s$%s", ScryptHashID, recommendedN, recommendedR, recommendedP, salts, hashs), nil
 }
 
-func ValidateScryptPassword(plaintext, hashed string) (valid bool, err error) {
+func ValidateScryptPassword(plaintext, hashed string) (err error) {
 	// First, parse the stub of the hash to get the scrypt parameters
 	salt, oldHash, N, r, p, err := parseScryptStub(hashed)
 	if err != nil {
@@ -52,11 +52,10 @@ func ValidateScryptPassword(plaintext, hashed string) (valid bool, err error) {
 	}
 	// Check if the old hash is the same as the new one
 	if base64.StdEncoding.EncodeToString(hash) == base64.StdEncoding.EncodeToString(oldHash) {
-		valid = true
-		err = nil
 		return
 	}
 
+	err = errors.New("Hashes do not match")
 	return
 }
 

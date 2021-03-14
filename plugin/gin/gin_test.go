@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//go:generate mockgen -destination ../../mock/auth_manager.go -package mock github.com/freecloudio/server/application/manager AuthManager,UserManager
+//go:generate mockgen -destination ../../mock/manager.go -package mock github.com/freecloudio/server/application/manager AuthManager,UserManager,NodeManager
 
 func TestNewRouter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)

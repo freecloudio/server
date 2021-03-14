@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseScryptStub(t *testing.T) {
@@ -19,6 +20,11 @@ func TestParseScryptStub(t *testing.T) {
 		{"wrong preemble", "$s3$16384$8$1$SaltString$Base64Password=", true},
 		{"missing parts", "$s1$16384$8$1$", true},
 		{"valid password", "$s1$16384$8$1$VmFsaWRTYWx0$VmFsaWRQYXNzd29yZA0K", false},
+		{"N no number", "$s1$ABC$8$1$VmFsaWRTYWx0$VmFsaWRQYXNzd29yZA0K", true},
+		{"r no number", "$s1$16384$c$1$VmFsaWRTYWx0$VmFsaWRQYXNzd29yZA0K", true},
+		{"p no number", "$s1$16384$8$b$VmFsaWRTYWx0$VmFsaWRQYXNzd29yZA0K", true},
+		{"salt no b64", "$s1$16384$8$1$VmF*aWRTYWx0$VmFsaWRQYXNzd29yZA0K", true},
+		{"hash no b64", "$s1$16384$8$1$VmFsaWRTYWx0$VmFsaWRQ)XNzd29yZA0K", true},
 	}
 
 	for _, td := range testdata {
@@ -34,19 +40,28 @@ func TestParseScryptStub(t *testing.T) {
 
 func TestPasswordHashing(t *testing.T) {
 	// verify that hashing the same password two times does not yield the same result
-	h1, err := HashScrypt("testpassword")
+	password := "testpassword"
+	h1, err := HashScrypt(password)
 	assert.Nil(t, err, "Error while hashing password")
 
-	h2, err := HashScrypt("testpassword")
+	h2, err := HashScrypt(password)
 	assert.Nil(t, err, "Error while hashing password")
 
 	assert.NotEqual(t, h1, h2, "Hashing the same password twice yielded the same result")
 
 	// first, hash a password, then test it against itself
-	hash, err := HashScrypt("h4x0r!")
-	assert.Nil(t, err, "Error while hashing password")
+	hash, err := HashScrypt(password)
+	require.Nil(t, err, "Error while hashing password")
 
-	valid, err := ValidateScryptPassword("h4x0r!", hash)
+	err = ValidateScryptPassword(password, hash)
 	assert.Nil(t, err, "Error while validating password")
-	assert.True(t, valid, "Expected a valid password verification, but it failed")
+
+	// bad hash
+	badHash := "badStuff$" + hash
+	err = ValidateScryptPassword(password, badHash)
+	assert.NotNil(t, err, "No error while validating with bad hash")
+
+	// wrong password
+	err = ValidateScryptPassword(password+"123", hash)
+	assert.NotNil(t, err, "No error while validating with bad password")
 }

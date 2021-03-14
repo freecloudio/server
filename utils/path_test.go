@@ -34,3 +34,28 @@ func TestGetPathSegments(t *testing.T) {
 		})
 	}
 }
+
+func TestSplitPath(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            string
+		expectedPath     string
+		expectedFilename string
+	}{
+		{"Empty", "", "", ""},
+		{"Only Slash", "/", "/", ""},
+		{"Only Filename", "file.txt", "", "file.txt"},
+		{"Slash and filename", "/file.txt", "/", "file.txt"},
+		{"Folder and filename", "folder/file.txt", "folder/", "file.txt"},
+		{"Folder with preceding slash and filename", "/folder/file.txt", "/folder/", "file.txt"},
+	}
+
+	for it := range tests {
+		test := tests[it]
+		t.Run(test.name, func(t *testing.T) {
+			actualPath, actualFilename := utils.SplitPath(test.input)
+			assert.Equal(t, test.expectedPath, actualPath)
+			assert.Equal(t, test.expectedFilename, actualFilename)
+		})
+	}
+}

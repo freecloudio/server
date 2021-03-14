@@ -30,7 +30,7 @@ func (r *Router) getNodeInfoByPath(c *gin.Context) {
 	authContext := getAuthContext(c)
 	path := c.Param(pathParam)
 
-	node, fcerr := r.managers.Node.GetNodeByPath(authContext, authContext.User.ID, path)
+	node, fcerr := r.managers.Node.GetNodeByPath(authContext, path)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
@@ -48,7 +48,7 @@ func (r *Router) getNodeInfoByID(c *gin.Context) {
 		return
 	}
 
-	node, fcerr := r.managers.Node.GetNodeByID(authContext, authContext.User.ID, nodeID)
+	node, fcerr := r.managers.Node.GetNodeByID(authContext, nodeID)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return

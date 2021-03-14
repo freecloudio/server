@@ -11,8 +11,8 @@ import (
 
 type NodeManager interface {
 	CreateUserRootFolder(authCtx *authorization.Context, userID models.UserID) *fcerror.Error
-	GetNodeByPath(authCtx *authorization.Context, userID models.UserID, path string) (*models.Node, *fcerror.Error)
-	GetNodeByID(authCtx *authorization.Context, userID models.UserID, nodeID models.NodeID) (*models.Node, *fcerror.Error)
+	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
+	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
 	Close()
 }
 
@@ -57,10 +57,14 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 	return
 }
 
-func (mgr *nodeManager) GetNodeByPath(authCtx *authorization.Context, userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
+func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, userID models.UserID) (fcerr *fcerror.Error) {
+	return
+}
+
+func (mgr *nodeManager) GetNodeByPath(authCtx *authorization.Context, path string) (node *models.Node, fcerr *fcerror.Error) {
 	//TODO: Sanitize
 
-	fcerr = authorization.EnforceSelf(authCtx, userID)
+	fcerr = authorization.EnforceUser(authCtx)
 	if fcerr != nil {
 		return
 	}
@@ -72,17 +76,17 @@ func (mgr *nodeManager) GetNodeByPath(authCtx *authorization.Context, userID mod
 	}
 	defer trans.Close()
 
-	node, fcerr = trans.GetNodeByPath(userID, path)
+	node, fcerr = trans.GetNodeByPath(authCtx.User.ID, path)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
-		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": userID, "path": path}).Error("Failed to get node for path")
+		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "path": path}).Error("Failed to get node for path")
 		return
 	}
 
 	return
 }
 
-func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
-	fcerr = authorization.EnforceSelf(authCtx, userID)
+func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
+	fcerr = authorization.EnforceUser(authCtx)
 	if fcerr != nil {
 		return
 	}
@@ -94,9 +98,9 @@ func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, userID model
 	}
 	defer trans.Close()
 
-	node, fcerr = trans.GetNodeByID(userID, nodeID)
+	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
-		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": userID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
+		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
 		return
 	}
 

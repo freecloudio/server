@@ -82,10 +82,8 @@ func TestLogoutEndpoint(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
-			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.valid {
-				mockAuthMgr.EXPECT().VerifyToken(good).Return(&models.Session{UserID: 1}, nil).Times(1)
-				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), models.UserID(1)).Return(&models.User{}, nil).Times(1)
+				mockAuthMgr.EXPECT().VerifyToken(good).Return(&models.User{}, nil).Times(1)
 				if test.success {
 					mockAuthMgr.EXPECT().Logout(good).Return(nil).Times(1)
 				} else {
@@ -95,7 +93,7 @@ func TestLogoutEndpoint(t *testing.T) {
 				mockAuthMgr.EXPECT().VerifyToken(bad).Return(nil, fcerror.NewError(fcerror.ErrUnauthorized, nil)).Times(1)
 			}
 
-			managers := &manager.Managers{Auth: mockAuthMgr, User: mockUserMgr}
+			managers := &manager.Managers{Auth: mockAuthMgr}
 			router := NewRouter(managers, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)

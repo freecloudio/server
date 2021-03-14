@@ -17,7 +17,7 @@ import (
 type AuthManager interface {
 	Login(email, password string) (*models.Session, *fcerror.Error)
 	Logout(token models.Token) *fcerror.Error
-	VerifyToken(token models.Token) (*models.Session, *fcerror.Error)
+	VerifyToken(token models.Token) (*models.User, *fcerror.Error)
 	CreateNewSession(userID models.UserID) (*models.Session, *fcerror.Error)
 	Close()
 }
@@ -87,15 +87,9 @@ func (mgr *authManager) Login(email, password string) (token *models.Session, fc
 		return
 	}
 
-	valid, err := utils.ValidateScryptPassword(password, user.Password)
+	err := utils.ValidateScryptPassword(password, user.Password)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to validate password")
-		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
-		return
-	}
-
-	if !valid {
-		logrus.WithError(fcerr).WithField("email", email).Warn("Unsuccessful login attempt for user")
+		logrus.WithError(err).WithField("email", email).Warn("Failed to validate password")
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
 		return
 	}
@@ -120,7 +114,7 @@ func (mgr *authManager) Logout(token models.Token) (fcerr *fcerror.Error) {
 	return
 }
 
-func (mgr *authManager) VerifyToken(token models.Token) (session *models.Session, fcerr *fcerror.Error) {
+func (mgr *authManager) VerifyToken(token models.Token) (user *models.User, fcerr *fcerror.Error) {
 	authTrans, fcerr := mgr.authPersistence.StartReadTransaction()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
@@ -128,7 +122,7 @@ func (mgr *authManager) VerifyToken(token models.Token) (session *models.Session
 	}
 	defer authTrans.Close()
 
-	session, fcerr = authTrans.GetSessionByToken(token)
+	session, fcerr := authTrans.GetSessionByToken(token)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Token not found or failed to verify")
 		return
@@ -139,7 +133,7 @@ func (mgr *authManager) VerifyToken(token models.Token) (session *models.Session
 		return
 	}
 
-	return
+	return mgr.managers.User.GetUserByID(authorization.NewUser(&models.User{ID: session.UserID}), session.UserID)
 }
 
 func (mgr *authManager) CreateNewSession(userID models.UserID) (session *models.Session, fcerr *fcerror.Error) {
