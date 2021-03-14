@@ -13,9 +13,9 @@ func TestGetPathSegments(t *testing.T) {
 		input            string
 		expectedSegments []string
 	}{
-		{"Empty path", "", []string{""}},
-		{"Empty path with spaces", "  \t  ", []string{""}},
-		{"Only Slash", "/", []string{""}},
+		{"Empty path", "", []string{}},
+		{"Empty path with spaces", "  \t  ", []string{}},
+		{"Only Slash", "/", []string{}},
 		{"One segment", "folder", []string{"folder"}},
 		{"One segment preceding slash", "/folder", []string{"folder"}},
 		{"One segment following slash", "folder/", []string{"folder"}},

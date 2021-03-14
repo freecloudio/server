@@ -14,10 +14,6 @@ func GetPathSegments(path string) []string {
 			filteredSegs = append(filteredSegs, trimmedSeg)
 		}
 	}
-
-	if len(filteredSegs) == 0 {
-		filteredSegs = append(filteredSegs, "")
-	}
 	return filteredSegs
 }
 

@@ -62,6 +62,7 @@ type nodeReadTransaction struct {
 
 func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
 	pathSegments := utils.GetPathSegments(path)
+	pathSegments = append([]string{""}, pathSegments...)
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
@@ -91,7 +92,7 @@ func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.N
 	record, err := neo4j.Single(tx.neoTx.Run(`
 			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node)
 			WHERE ID(u) = $user_id AND ID(n) = $node_id
-			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(nodes(p)) | s + '/' + n.name) as path
+			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as path
 		`,
 		map[string]interface{}{
 			"user_id": userID,
@@ -146,7 +147,7 @@ func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.U
 
 func (tx *nodeReadTransaction) getOwnerOfNodeID(nodeID models.NodeID) (userID models.UserID, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node)
+			MATCH (u:User)-[:HAS_ROOT_FOLDER|CONTAINS*]->(n:Node)
 			WHERE ID(n) = $node_id
 			RETURN ID(u) as id
 		`,
@@ -175,7 +176,6 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 	insertNode := &models.Node{
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
-		OwnerID: userID,
 		Name:    "",
 	}
 
@@ -195,4 +195,43 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 	}
 
 	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
+}
+
+func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (createdNodeID models.NodeID, fcerr *fcerror.Error) {
+	insertNode := &models.Node{
+		Created: utils.GetCurrentTime(),
+		Updated: utils.GetCurrentTime(),
+		Name:    name,
+	}
+	insertNodeType := "File"
+	if nodeType == models.NodeTypeFolder {
+		insertNodeType = "Folder"
+	}
+
+	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
+			MATCH (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder)
+			WHERE ID(u) = $user_id AND ID(f) = $parent_node_id
+			MERGE (f)-[:CONTAINS]->(n:Node:%s {name: $n.name})
+			ON CREATE
+				SET n = $n
+			RETURN ID(n) as id
+		`, insertNodeType),
+		map[string]interface{}{
+			"user_id":        userID,
+			"parent_node_id": parentNodeID,
+			"n":              modelToMap(insertNode),
+		}))
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
+		return
+	}
+
+	nodeIDInt, ok := record.Get("id")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
+		return
+	}
+	createdNodeID = models.NodeID(nodeIDInt.(int64))
+
+	return
 }

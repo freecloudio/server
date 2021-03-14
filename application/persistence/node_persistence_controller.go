@@ -20,4 +20,5 @@ type NodePersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
 	NodePersistenceReadTransaction
 	CreateUserRootFolder(userID models.UserID) *fcerror.Error
+	CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (models.NodeID, *fcerror.Error)
 }

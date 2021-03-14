@@ -2,6 +2,7 @@ package gin
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -12,8 +13,10 @@ import (
 )
 
 const (
-	pathParam   = "path"
-	nodeIDParam = "node_id"
+	pathParam          = "path"
+	nodeIDParam        = "node_id"
+	filenameParam      = "filename"
+	nodeTypeQueryParam = "node_type"
 )
 
 func (r *Router) buildNodeRoutes() {
@@ -21,7 +24,7 @@ func (r *Router) buildNodeRoutes() {
 
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
-	// info/id/
+	grp.POST(fmt.Sprintf("create/id/:%s/:%s", nodeIDParam, filenameParam), r.createNodeByID)
 	// list/id/
 	// content/id/
 }
@@ -55,6 +58,31 @@ func (r *Router) getNodeInfoByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, node)
+}
+
+func (r *Router) createNodeByID(c *gin.Context) {
+	authContext := getAuthContext(c)
+	nodeID, fcerr := extractNodeID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+	filename := c.Param(filenameParam)
+
+	nodeTypeStr := c.Query(nodeTypeQueryParam)
+	nodeType := models.NodeTypeFolder
+	if nodeTypeStr == string(models.NodeTypeFile) {
+		nodeType = models.NodeTypeFile
+	}
+
+	createdNodeID, fcerr := r.managers.Node.CreateNode(authContext, nodeType, nodeID, filename)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"created_node_id": createdNodeID})
 }
 
 func extractNodeID(c *gin.Context) (nodeID models.NodeID, fcerr *fcerror.Error) {
