@@ -252,6 +252,21 @@ func (mr *MockNodeManagerMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockNodeManager)(nil).Close))
 }
 
+// CreateNode mocks base method.
+func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 models.NodeType, arg2 models.NodeID, arg3 string) (models.NodeID, *fcerror.Error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateNode", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(models.NodeID)
+	ret1, _ := ret[1].(*fcerror.Error)
+	return ret0, ret1
+}
+
+// CreateNode indicates an expected call of CreateNode.
+func (mr *MockNodeManagerMockRecorder) CreateNode(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNode", reflect.TypeOf((*MockNodeManager)(nil).CreateNode), arg0, arg1, arg2, arg3)
+}
+
 // CreateUserRootFolder mocks base method.
 func (m *MockNodeManager) CreateUserRootFolder(arg0 *authorization.Context, arg1 models.UserID) *fcerror.Error {
 	m.ctrl.T.Helper()
