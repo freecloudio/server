@@ -52,6 +52,7 @@ func TestRegisterUserEndpoint(t *testing.T) {
 			resp, err := http.Post(fmt.Sprintf("%s/api/user", testSrv.URL), "application/json", strings.NewReader(test.input))
 
 			require.Nil(t, err, "Error calling register endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Register endpoint does not return expected status")
 		})
 	}
@@ -99,6 +100,7 @@ func TestGetOwnUserEndpoint(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 
 			require.Nil(t, err, "Error calling get own user endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Get own user endpoint does not return expected status")
 		})
 	}
@@ -143,6 +145,7 @@ func TestGetUserByIDEndpoint(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 
 			require.Nil(t, err, "Error calling get user by id endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Get user by id endpoint does not return expected status")
 		})
 	}

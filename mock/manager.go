@@ -253,12 +253,13 @@ func (mr *MockNodeManagerMockRecorder) Close() *gomock.Call {
 }
 
 // CreateNode mocks base method.
-func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 models.NodeType, arg2 models.NodeID, arg3 string) (models.NodeID, *fcerror.Error) {
+func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 models.NodeType, arg2 models.NodeID, arg3 string) (models.NodeID, bool, *fcerror.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNode", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(models.NodeID)
-	ret1, _ := ret[1].(*fcerror.Error)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*fcerror.Error)
+	return ret0, ret1, ret2
 }
 
 // CreateNode indicates an expected call of CreateNode.

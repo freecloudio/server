@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
+	"github.com/freecloudio/server/utils"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,6 +66,7 @@ func TestGetNodeInfoByPath(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 
 			require.Nil(t, err, "Error calling get node info by path endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Get node info by path endpoint does not return expected status")
 		})
 	}
@@ -112,7 +115,80 @@ func TestGetNodeInfoByID(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 
 			require.Nil(t, err, "Error calling get node info by id endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Get node info by id endpoint does not return expected status")
+		})
+	}
+}
+
+func TestCreateNodeByID(t *testing.T) {
+	var (
+		token models.Token = "token"
+	)
+
+	tests := []struct {
+		name              string
+		inputParentNodeID models.NodeID
+		inputFile         bool
+		inputNew          bool
+		success           bool
+		expectedCode      int
+	}{
+		{name: "Success Existing Folder", inputParentNodeID: models.NodeID(1), success: true, inputFile: false, inputNew: false, expectedCode: http.StatusOK},
+		{name: "Failure Existing Folder", inputParentNodeID: models.NodeID(2), success: false, inputFile: false, inputNew: false, expectedCode: http.StatusNotFound},
+		{name: "Success New File", inputParentNodeID: models.NodeID(2), success: true, inputFile: true, inputNew: true, expectedCode: http.StatusOK},
+		{name: "Failure New File", inputParentNodeID: models.NodeID(2), success: false, inputFile: true, inputNew: true, expectedCode: http.StatusNotFound},
+		{name: "Success Existing File", inputParentNodeID: models.NodeID(2), success: true, inputFile: true, inputNew: false, expectedCode: http.StatusOK},
+	}
+
+	for it := range tests {
+		test := tests[it]
+		t.Run(test.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockAuthMgr := mock.NewMockAuthManager(mockCtrl)
+			mockAuthMgr.EXPECT().VerifyToken(token).Return(&models.User{}, nil).Times(1)
+			mockNodeMgr := mock.NewMockNodeManager(mockCtrl)
+			nodeType := models.NodeTypeFolder
+			if test.inputFile {
+				nodeType = models.NodeTypeFile
+			}
+			fileName := utils.GenerateRandomString(10)
+			resultNodeID := models.NodeID(7)
+			if test.success {
+				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(resultNodeID, test.inputNew, nil).Times(1)
+			} else {
+				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(models.NodeID(0), test.inputNew, fcerror.NewError(fcerror.ErrNodeNotFound, nil)).Times(1)
+			}
+
+			managers := &manager.Managers{Node: mockNodeMgr, Auth: mockAuthMgr}
+			router := NewRouter(managers, ":8080")
+
+			testSrv := httptest.NewServer(router.engine)
+			defer testSrv.Close()
+
+			params := ""
+			if test.inputFile {
+				params = "?file"
+			}
+			req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/node/create/id/%d/%s%s", testSrv.URL, test.inputParentNodeID, fileName, params), nil)
+			require.Nil(t, err, "Failed creating create node by parent id request")
+			req.Header.Add("Authorization", "Bearer "+string(token))
+
+			resp, err := http.DefaultClient.Do(req)
+
+			require.Nil(t, err, "Error calling create node by parent id endpoint")
+			defer resp.Body.Close()
+			assert.Equal(t, test.expectedCode, resp.StatusCode, "Create node by parent id endpoint does not return expected status")
+
+			resJSON := map[string]interface{}{}
+			err = json.NewDecoder(resp.Body).Decode(&resJSON)
+			require.Nil(t, err, "Failed to decode response JSON")
+			if test.success {
+				assert.Equal(t, float64(resultNodeID), resJSON["node_id"], "Returned node id does not match")
+				assert.Equal(t, test.inputNew, resJSON["created"], "Returned created flag does not match")
+			}
 		})
 	}
 }

@@ -52,6 +52,7 @@ func TestLoginEndpoint(t *testing.T) {
 			resp, err := http.Post(fmt.Sprintf("%s/api/auth/login", testSrv.URL), "application/json", strings.NewReader(test.input))
 
 			require.Nil(t, err, "Error calling login endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Login endpoint does not return expected status")
 		})
 	}
@@ -106,6 +107,7 @@ func TestLogoutEndpoint(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 
 			require.Nil(t, err, "Error calling logout endpoint")
+			defer resp.Body.Close()
 			assert.Equal(t, test.expectedCode, resp.StatusCode, "Logout endpoint does not return expected status")
 		})
 	}

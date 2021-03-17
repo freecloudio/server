@@ -13,7 +13,7 @@ type NodeManager interface {
 	CreateUserRootFolder(authCtx *authorization.Context, userID models.UserID) *fcerror.Error
 	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
 	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
-	CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (models.NodeID, *fcerror.Error)
+	CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (models.NodeID, bool, *fcerror.Error)
 	Close()
 }
 
@@ -50,7 +50,7 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
-	fcerr = trans.CreateUserRootFolder(userID)
+	_, fcerr = trans.CreateUserRootFolder(userID)
 	if fcerr != nil {
 		logrus.WithField("userID", userID).WithError(fcerr).Error("Failed to create persistence user root folder")
 		return
@@ -58,7 +58,9 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 	return
 }
 
-func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (createdNodeID models.NodeID, fcerr *fcerror.Error) {
+func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (nodeID models.NodeID, created bool, fcerr *fcerror.Error) {
+	// TODO: Sanitize Name
+
 	fcerr = authorization.EnforceUser(authCtx)
 	if fcerr != nil {
 		return
@@ -71,7 +73,9 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType mode
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
-	createdNodeID, fcerr = trans.CreateNodeByID(authCtx.User.ID, nodeType, parentNodeID, name)
+	// TODO: Check if already existing
+
+	nodeID, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, nodeType, parentNodeID, name)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create node")
 		return

@@ -172,7 +172,7 @@ type nodeReadWriteTransaction struct {
 	nodeReadTransaction
 }
 
-func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (fcerr *fcerror.Error) {
+func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (created bool, fcerr *fcerror.Error) {
 	insertNode := &models.Node{
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
@@ -191,13 +191,18 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 			"f":       modelToMap(insertNode),
 		})
 	if err == nil {
-		_, err = res.Consume()
+		var summary neo4j.ResultSummary
+		summary, err = res.Consume()
+		if summary.Counters().NodesCreated() > 0 {
+			created = true
+		}
 	}
 
-	return neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
+	fcerr = neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
+	return
 }
 
-func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (createdNodeID models.NodeID, fcerr *fcerror.Error) {
+func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (nodeID models.NodeID, created bool, fcerr *fcerror.Error) {
 	insertNode := &models.Node{
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
@@ -208,7 +213,7 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		insertNodeType = "Folder"
 	}
 
-	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
+	result, err := tx.neoTx.Run(fmt.Sprintf(`
 			MATCH (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder)
 			WHERE ID(u) = $user_id AND ID(f) = $parent_node_id
 			MERGE (f)-[:CONTAINS]->(n:Node:%s {name: $n.name})
@@ -220,10 +225,16 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 			"user_id":        userID,
 			"parent_node_id": parentNodeID,
 			"n":              modelToMap(insertNode),
-		}))
+		})
+	record, err := neo4j.Single(result, err)
 	if err != nil {
 		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
 		return
+	}
+
+	summary, err := result.Summary()
+	if err == nil && summary.Counters().NodesCreated() > 0 {
+		created = true
 	}
 
 	nodeIDInt, ok := record.Get("id")
@@ -231,7 +242,7 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
 		return
 	}
-	createdNodeID = models.NodeID(nodeIDInt.(int64))
+	nodeID = models.NodeID(nodeIDInt.(int64))
 
 	return
 }

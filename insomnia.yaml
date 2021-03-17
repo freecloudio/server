@@ -1,8 +1,103 @@
 _type: export
 __export_format: 4
-__export_date: 2021-03-06T19:03:05.745Z
+__export_date: 2021-03-17T21:06:03.885Z
 __export_source: insomnia.desktop.app:v2020.5.2
 resources:
+  - _id: req_46d8f39ea4bd4913b0814e593994aab7
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1616014572691
+    created: 1615734480621
+    url: "{{base_url}}/api/node/create/id/{% response 'body',
+      'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60
+      %}/{% prompt 'Path', '', '', '', false, true %}"
+    name: Create Node By Parent ID
+    description: ""
+    method: POST
+    body: {}
+    parameters:
+      - name: file
+        value: ""
+        description: ""
+        id: pair_0787e522be1f48188a6c33dadf86e071
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1615734480622
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: fld_60aa556019ad4b55bba48c9014dd33ac
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1615676401468
+    created: 1615676401468
+    name: Node
+    description: ""
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1615676401468
+    _type: request_group
+  - _id: wrk_085358b34fdd4e32b74557ce56fdda2a
+    parentId: null
+    modified: 1592679770768
+    created: 1592679770768
+    name: freecloud
+    description: ""
+    scope: null
+    _type: workspace
+  - _id: req_c230359045644530b1cda4f08e8c4066
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1615735768323
+    created: 1615676412203
+    url: "{{base_url}}/api/node/info/path/{% prompt 'Path', '', '', '', false, true
+      %}"
+    name: Get Node Info By Path
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813194.5
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_e6fd600bdf624d548820b375c7851a35
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1615735902383
+    created: 1615678128881
+    url: "{{base_url}}/api/node/info/id/{% prompt 'Node ID', '', '', '', false, true
+      %}"
+    name: Get Node Info By ID
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813188.25
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
   - _id: req_408d1d59221044c1a6b61db7d388ee77
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
     modified: 1614273587208
@@ -43,14 +138,6 @@ resources:
     environmentPropertyOrder: null
     metaSortKey: -1614273553203
     _type: request_group
-  - _id: wrk_085358b34fdd4e32b74557ce56fdda2a
-    parentId: null
-    modified: 1592679770768
-    created: 1592679770768
-    name: freecloud
-    description: ""
-    scope: null
-    _type: workspace
   - _id: req_a8058f3c495d42d38c17787085771f24
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
     modified: 1614273710136
@@ -118,7 +205,7 @@ resources:
     _type: request_group
   - _id: req_b93c615d605346ef88e5338633492f58
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1614273713849
+    modified: 1615734980743
     created: 1614271661520
     url: "{{base_url}}/api/user"
     name: Get Own User
@@ -164,7 +251,7 @@ resources:
     _type: request
   - _id: env_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
     parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
-    modified: 1615056700303
+    modified: 1616014449274
     created: 1592679770868
     name: Base Environment
     data:
