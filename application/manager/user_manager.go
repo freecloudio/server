@@ -76,15 +76,15 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 		return
 	}
 
-	fcerr = mgr.managers.Node.CreateUserRootFolder(authorization.NewSystem(), user.ID)
-	if fcerr != nil {
-		trans.Rollback()
-		return
-	}
-
 	fcerr = trans.Commit()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to commit transaction")
+		return
+	}
+
+	fcerr = mgr.managers.Node.CreateUserRootFolder(authorization.NewSystem(), user.ID)
+	if fcerr != nil {
+		// TODO: Delete user
 		return
 	}
 

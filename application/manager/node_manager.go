@@ -14,7 +14,7 @@ type NodeManager interface {
 	CreateUserRootFolder(authCtx *authorization.Context, userID models.UserID) *fcerror.Error
 	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
 	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
-	CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (models.NodeID, bool, *fcerror.Error)
+	CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (*models.Node, bool, *fcerror.Error)
 	Close()
 }
 
@@ -68,7 +68,7 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 	return
 }
 
-func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (nodeID models.NodeID, created bool, fcerr *fcerror.Error) {
+func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (node *models.Node, created bool, fcerr *fcerror.Error) {
 	// TODO: Sanitize Name
 
 	fcerr = authorization.EnforceUser(authCtx)
@@ -85,10 +85,19 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType mode
 
 	// TODO: Check if already existing
 
-	nodeID, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, nodeType, parentNodeID, name)
+	node, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, nodeType, parentNodeID, name)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create node")
 		return
+	}
+	if !created {
+		logrus.WithField("node", node).Info("File or folder already exists in persistence, don't create in storage")
+		return
+	}
+
+	fcerr = mgr.fileStorage.CreateEmptyFileOrFolder(node)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithField("node", node).Error("Failed to create empty file or folder")
 	}
 
 	return

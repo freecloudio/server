@@ -1,9 +1,11 @@
 package fcerror
 
 const (
-	ErrFolderCreationFailed ErrorID = iota + 500
+	ErrFileFolderCreationFailed ErrorID = iota + 500
+	ErrStorageOperationWithWrongUserPerspective
 )
 
 func init() {
-	errorDescriptions[ErrFolderCreationFailed] = "Failed to create new folder"
+	errorDescriptions[ErrFileFolderCreationFailed] = "Failed to create new folder or file"
+	errorDescriptions[ErrStorageOperationWithWrongUserPerspective] = "Server tried a storage operation from the wrong file user perspective"
 }

@@ -202,7 +202,7 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 	return
 }
 
-func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (nodeID models.NodeID, created bool, fcerr *fcerror.Error) {
+func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (node *models.Node, created bool, fcerr *fcerror.Error) {
 	insertNode := &models.Node{
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
@@ -214,12 +214,12 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 	}
 
 	result, err := tx.neoTx.Run(fmt.Sprintf(`
-			MATCH (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder)
+			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder)
 			WHERE ID(u) = $user_id AND ID(f) = $parent_node_id
 			MERGE (f)-[:CONTAINS]->(n:Node:%s {name: $n.name})
 			ON CREATE
 				SET n = $n
-			RETURN ID(n) as id
+			RETURN ID(n) as id, n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as parent_path
 		`, insertNodeType),
 		map[string]interface{}{
 			"user_id":        userID,
@@ -242,7 +242,15 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
 		return
 	}
-	nodeID = models.NodeID(nodeIDInt.(int64))
+	nodeID := models.NodeID(nodeIDInt.(int64))
 
+	parentPathInt, ok := record.Get("parent_path")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("parent_path not found in record"))
+		return
+	}
+	path := utils.JoinPaths(parentPathInt.(string), name)
+
+	node, fcerr = tx.fillNodeInfo(record, userID, nodeID, path)
 	return
 }

@@ -10,6 +10,7 @@
 			"request": "launch",
 			"mode": "auto",
 			"program": "${workspaceFolder}/cmd/freecloud-server",
+			"cwd": "${workspaceFolder}",
 			"env": {},
 			"args": []
 		},
@@ -19,6 +20,7 @@
 			"request": "launch",
 			"mode": "debug",
 			"program": "${workspaceFolder}/cmd/freecloud-server",
+			"cwd": "${workspaceFolder}",
 			"env": {},
 			"args": []
 		}

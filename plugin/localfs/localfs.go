@@ -22,7 +22,7 @@ func CreateLocalFSStorage(cfg config.Config) (localFS *LocalFSStorage, fcerr *fc
 	}
 	err := os.MkdirAll(localFS.basepath, osPermission)
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrFolderCreationFailed, err)
+		fcerr = fcerror.NewError(fcerror.ErrFileFolderCreationFailed, err)
 	}
 	return
 }
@@ -39,15 +39,35 @@ func (fs *LocalFSStorage) CreateUserRootFolder(userID models.UserID) (fcerr *fce
 	userPath := fs.getUserFolder(userID)
 	err := os.Mkdir(userPath, osPermission)
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrFolderCreationFailed, err)
+		fcerr = fcerror.NewError(fcerror.ErrFileFolderCreationFailed, err)
 	}
 	return
 }
 
-func (fs *LocalFSStorage) CreateEmptyFile(userID models.UserID, node *models.Node) (fcerr *fcerror.Error) {
+func (fs *LocalFSStorage) CreateEmptyFileOrFolder(node *models.Node) (fcerr *fcerror.Error) {
+	if node.OwnerID != node.PerspectiveUserID {
+		return fcerror.NewError(fcerror.ErrFileFolderCreationFailed, nil)
+	}
+
+	userPath := fs.getUserFolder(node.OwnerID)
+	path := utils.JoinPaths(userPath, node.FullPath)
+
+	var err error
+	switch node.Type {
+	case models.NodeTypeFolder:
+		err = os.Mkdir(path, osPermission)
+	default:
+		var file *os.File
+		file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, osPermission)
+		_ = file.Close()
+	}
+
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrFileFolderCreationFailed, err)
+	}
 	return
 }
 
-func (fs *LocalFSStorage) CreateFileFromUpload(userID models.UserID, node *models.Node, uploadPath string) (fcerr *fcerror.Error) {
+func (fs *LocalFSStorage) CreateFileFromUpload(node *models.Node, uploadPath string) (fcerr *fcerror.Error) {
 	return
 }

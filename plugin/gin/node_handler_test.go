@@ -155,11 +155,11 @@ func TestCreateNodeByID(t *testing.T) {
 				nodeType = models.NodeTypeFile
 			}
 			fileName := utils.GenerateRandomString(10)
-			resultNodeID := models.NodeID(7)
+			resultNode := &models.Node{ID: models.NodeID(7)}
 			if test.success {
-				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(resultNodeID, test.inputNew, nil).Times(1)
+				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(resultNode, test.inputNew, nil).Times(1)
 			} else {
-				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(models.NodeID(0), test.inputNew, fcerror.NewError(fcerror.ErrNodeNotFound, nil)).Times(1)
+				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(nil, test.inputNew, fcerror.NewError(fcerror.ErrNodeNotFound, nil)).Times(1)
 			}
 
 			managers := &manager.Managers{Node: mockNodeMgr, Auth: mockAuthMgr}
@@ -186,7 +186,7 @@ func TestCreateNodeByID(t *testing.T) {
 			err = json.NewDecoder(resp.Body).Decode(&resJSON)
 			require.Nil(t, err, "Failed to decode response JSON")
 			if test.success {
-				assert.Equal(t, float64(resultNodeID), resJSON["node_id"], "Returned node id does not match")
+				assert.Equal(t, float64(resultNode.ID), resJSON["node_id"], "Returned node id does not match")
 				assert.Equal(t, test.inputNew, resJSON["created"], "Returned created flag does not match")
 			}
 		})

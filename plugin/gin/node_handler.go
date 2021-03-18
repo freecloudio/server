@@ -76,13 +76,13 @@ func (r *Router) createNodeByID(c *gin.Context) {
 		nodeType = models.NodeTypeFile
 	}
 
-	createdNodeID, created, fcerr := r.managers.Node.CreateNode(authContext, nodeType, nodeID, filename)
+	createdNode, created, fcerr := r.managers.Node.CreateNode(authContext, nodeType, nodeID, filename)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"node_id": createdNodeID, "created": created})
+	c.JSON(http.StatusOK, gin.H{"node_id": createdNode.ID, "created": created})
 }
 
 func extractNodeID(c *gin.Context) (nodeID models.NodeID, fcerr *fcerror.Error) {

@@ -7,6 +7,6 @@ import (
 
 type FileStorageController interface {
 	CreateUserRootFolder(userID models.UserID) *fcerror.Error
-	CreateEmptyFile(userID models.UserID, node *models.Node) *fcerror.Error
-	CreateFileFromUpload(userID models.UserID, node *models.Node, uploadPath string) *fcerror.Error
+	CreateEmptyFileOrFolder(node *models.Node) *fcerror.Error
+	CreateFileFromUpload(node *models.Node, uploadPath string) *fcerror.Error
 }
