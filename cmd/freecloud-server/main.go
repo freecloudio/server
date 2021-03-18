@@ -10,6 +10,7 @@ import (
 
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/plugin/gin"
+	"github.com/freecloudio/server/plugin/localfs"
 	"github.com/freecloudio/server/plugin/neo"
 	_ "github.com/freecloudio/server/plugin/neo"
 	"github.com/freecloudio/server/plugin/viperplg"
@@ -28,15 +29,20 @@ func main() {
 	if fcerr != nil {
 		logrus.WithError(fcerr).Fatal("Failed to initialize neo user persistence plugin - abort")
 	}
-	nodePersistence, fcerr := neo.CreateNodeePersistence(cfg)
+	nodePersistence, fcerr := neo.CreateNodePersistence(cfg)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Fatal("Failed to initialize neo node persistence plugin - abort")
+	}
+
+	localFSFileStorage, fcerr := localfs.CreateLocalFSStorage(cfg)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to initialize localfs file storage plugin - abort")
 	}
 
 	managers := &manager.Managers{}
 	authMgr := manager.NewAuthManager(cfg, authPersistence, managers)
 	userMgr := manager.NewUserManager(cfg, userPersistence, managers)
-	nodeMgr := manager.NewNodeManager(cfg, nodePersistence, managers)
+	nodeMgr := manager.NewNodeManager(cfg, nodePersistence, localFSFileStorage, managers)
 
 	router := gin.NewRouter(managers, ":8080")
 

@@ -76,6 +76,12 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 		return
 	}
 
+	fcerr = mgr.managers.Node.CreateUserRootFolder(authorization.NewSystem(), user.ID)
+	if fcerr != nil {
+		trans.Rollback()
+		return
+	}
+
 	fcerr = trans.Commit()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to commit transaction")
@@ -95,11 +101,6 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 	} else if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to count users to determine whether created user should be an admin - ignore for now")
 		fcerr = nil
-	}
-
-	fcerr = mgr.managers.Node.CreateUserRootFolder(authorization.NewSystem(), user.ID)
-	if fcerr != nil {
-		return
 	}
 
 	return mgr.managers.Auth.CreateNewSession(user.ID)

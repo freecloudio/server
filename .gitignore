@@ -14,3 +14,7 @@
 # Built binaries & files
 freecloud-server
 !cmd/freecloud-server
+
+# Data folders
+data
+tmp

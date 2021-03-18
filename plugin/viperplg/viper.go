@@ -17,6 +17,9 @@ const (
 	keyDBConnectionUsername = "db.connection.username"
 	keyDBConnectionPassword = "db.connection.password"
 	keyDBConnectionString   = "db.connection.string"
+
+	keyFileStorageTempBasePath    = "storage.temp.basepath"
+	keyFileStorageLocalFSBasePath = "storage.file.localfs.basepath"
 )
 
 type ViperConfig struct {
@@ -34,6 +37,9 @@ func InitViperConfig() *ViperConfig {
 	p.String(keyDBConnectionUsername, "neo4j", "Username for the database connection")
 	p.String(keyDBConnectionPassword, "freecloud", "Password for the database connection")
 	p.String(keyDBConnectionString, "bolt://localhost:7687", "Connection string for the database")
+
+	p.String(keyFileStorageTempBasePath, "tmp", "Base path of folder for temporary files")
+	p.String(keyFileStorageLocalFSBasePath, "data", "Base path of the local filesystem file storage")
 
 	p.Parse(os.Args[1:])
 	v.BindPFlags(p)
@@ -73,4 +79,12 @@ func (cfg *ViperConfig) GetDBPassword() string {
 
 func (cfg *ViperConfig) GetDBConnectionString() string {
 	return cfg.viper.GetString(keyDBConnectionString)
+}
+
+func (cfg *ViperConfig) GetFileStorageTempBasePath() string {
+	return cfg.viper.GetString(keyFileStorageTempBasePath)
+}
+
+func (cfg *ViperConfig) GetFileStorageLocalFSBasePath() string {
+	return cfg.viper.GetString(keyFileStorageLocalFSBasePath)
 }

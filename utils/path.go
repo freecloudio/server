@@ -20,3 +20,7 @@ func GetPathSegments(path string) []string {
 func SplitPath(path string) (string, string) {
 	return filepath.Split(path)
 }
+
+func JoinPaths(paths ...string) string {
+	return filepath.Join(paths...)
+}

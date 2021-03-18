@@ -4,6 +4,7 @@ import (
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
+	"github.com/freecloudio/server/application/storage"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/sirupsen/logrus"
@@ -17,10 +18,11 @@ type NodeManager interface {
 	Close()
 }
 
-func NewNodeManager(cfg config.Config, nodePersistence persistence.NodePersistenceController, managers *Managers) NodeManager {
+func NewNodeManager(cfg config.Config, nodePersistence persistence.NodePersistenceController, fileStorage storage.FileStorageController, managers *Managers) NodeManager {
 	nodeMgr := &nodeManager{
 		cfg:             cfg,
 		nodePersistence: nodePersistence,
+		fileStorage:     fileStorage,
 		managers:        managers,
 	}
 
@@ -31,6 +33,7 @@ func NewNodeManager(cfg config.Config, nodePersistence persistence.NodePersisten
 type nodeManager struct {
 	cfg             config.Config
 	nodePersistence persistence.NodePersistenceController
+	fileStorage     storage.FileStorageController
 	managers        *Managers
 }
 
@@ -55,6 +58,13 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 		logrus.WithField("userID", userID).WithError(fcerr).Error("Failed to create persistence user root folder")
 		return
 	}
+
+	fcerr = mgr.fileStorage.CreateUserRootFolder(userID)
+	if fcerr != nil {
+		logrus.WithField("userID", userID).WithError(fcerr).Error("Failed to create file storage user root folder")
+		return
+	}
+
 	return
 }
 

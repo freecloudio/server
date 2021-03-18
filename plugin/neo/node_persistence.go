@@ -20,7 +20,7 @@ func init() {
 
 type NodePersistence struct{}
 
-func CreateNodeePersistence(cfg config.Config) (nodePersistence *NodePersistence, fcerr *fcerror.Error) {
+func CreateNodePersistence(cfg config.Config) (nodePersistence *NodePersistence, fcerr *fcerror.Error) {
 	if neo == nil {
 		fcerr = initializeNeo(cfg)
 		if fcerr != nil {
