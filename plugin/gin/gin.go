@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models/fcerror"
 
@@ -16,9 +17,10 @@ type Router struct {
 	engine   *gin.Engine
 	managers *manager.Managers
 	srv      *http.Server
+	cfg      config.Config
 }
 
-func NewRouter(managers *manager.Managers, addr string) (router *Router) {
+func NewRouter(managers *manager.Managers, cfg config.Config, addr string) (router *Router) {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
@@ -31,6 +33,7 @@ func NewRouter(managers *manager.Managers, addr string) (router *Router) {
 			Addr:    ":8080",
 			Handler: ginRouter,
 		},
+		cfg: cfg,
 	}
 	router.buildRoutes()
 

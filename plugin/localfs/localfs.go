@@ -2,6 +2,7 @@ package localfs
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/freecloudio/server/application/config"
@@ -31,8 +32,12 @@ func (*LocalFSStorage) Close() *fcerror.Error {
 	return nil
 }
 
-func (fs *LocalFSStorage) getUserFolder(userID models.UserID) (path string) {
+func (fs *LocalFSStorage) getUserFolder(userID models.UserID) string {
 	return utils.JoinPaths(fs.basepath, fmt.Sprintf("%d", userID))
+}
+
+func (fs *LocalFSStorage) getUserNodePath(node *models.Node) string {
+	return utils.JoinPaths(fs.getUserFolder(node.OwnerID), node.FullPath)
 }
 
 func (fs *LocalFSStorage) CreateUserRootFolder(userID models.UserID) (fcerr *fcerror.Error) {
@@ -49,8 +54,7 @@ func (fs *LocalFSStorage) CreateEmptyFileOrFolder(node *models.Node) (fcerr *fce
 		return fcerror.NewError(fcerror.ErrFileFolderCreationFailed, nil)
 	}
 
-	userPath := fs.getUserFolder(node.OwnerID)
-	path := utils.JoinPaths(userPath, node.FullPath)
+	path := fs.getUserNodePath(node)
 
 	var err error
 	switch node.Type {
@@ -68,6 +72,29 @@ func (fs *LocalFSStorage) CreateEmptyFileOrFolder(node *models.Node) (fcerr *fce
 	return
 }
 
-func (fs *LocalFSStorage) CreateFileFromUpload(node *models.Node, uploadPath string) (fcerr *fcerror.Error) {
+func (fs *LocalFSStorage) CopyFileFromUpload(node *models.Node, uploadPath string) (fcerr *fcerror.Error) {
+	if node.OwnerID != node.PerspectiveUserID {
+		return fcerror.NewError(fcerror.ErrFileFolderCreationFailed, nil)
+	}
+
+	path := fs.getUserNodePath(node)
+
+	source, err := os.OpenFile(uploadPath, os.O_RDONLY, osPermission)
+	if err != nil {
+		return fcerror.NewError(fcerror.ErrOpenUploadFile, err)
+	}
+	defer source.Close()
+
+	destination, err := os.OpenFile(path, os.O_RDWR, osPermission)
+	if err != nil {
+		return fcerror.NewError(fcerror.ErrOpenUploadFile, err)
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return fcerror.NewError(fcerror.ErrBadRequest, err)
+	}
+
 	return
 }

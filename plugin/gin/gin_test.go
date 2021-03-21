@@ -19,7 +19,7 @@ func TestNewRouter(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	managers := &manager.Managers{}
-	router := NewRouter(managers, ":8080")
+	router := NewRouter(managers, nil, ":8080")
 
 	assert.NotNil(t, router.engine, "Router engine is nil")
 	assert.NotNil(t, router.srv, "Router srv is nil")
@@ -30,7 +30,7 @@ func TestHealthEndpoint(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	router := NewRouter(&manager.Managers{}, ":8080")
+	router := NewRouter(&manager.Managers{}, nil, ":8080")
 
 	testSrv := httptest.NewServer(router.engine)
 	defer testSrv.Close()

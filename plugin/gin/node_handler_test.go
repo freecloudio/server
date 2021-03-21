@@ -54,7 +54,7 @@ func TestGetNodeInfoByPath(t *testing.T) {
 			}
 
 			managers := &manager.Managers{Node: mockNodeMgr, Auth: mockAuthMgr}
-			router := NewRouter(managers, ":8080")
+			router := NewRouter(managers, nil, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -103,7 +103,7 @@ func TestGetNodeInfoByID(t *testing.T) {
 			}
 
 			managers := &manager.Managers{Node: mockNodeMgr, Auth: mockAuthMgr}
-			router := NewRouter(managers, ":8080")
+			router := NewRouter(managers, nil, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -163,7 +163,7 @@ func TestCreateNodeByID(t *testing.T) {
 			}
 
 			managers := &manager.Managers{Node: mockNodeMgr, Auth: mockAuthMgr}
-			router := NewRouter(managers, ":8080")
+			router := NewRouter(managers, nil, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()

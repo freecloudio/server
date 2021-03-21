@@ -44,7 +44,7 @@ func TestLoginEndpoint(t *testing.T) {
 			}
 
 			managers := &manager.Managers{Auth: mockAuthMgr}
-			router := NewRouter(managers, ":8080")
+			router := NewRouter(managers, nil, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
@@ -95,7 +95,7 @@ func TestLogoutEndpoint(t *testing.T) {
 			}
 
 			managers := &manager.Managers{Auth: mockAuthMgr}
-			router := NewRouter(managers, ":8080")
+			router := NewRouter(managers, nil, ":8080")
 
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()

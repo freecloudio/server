@@ -8,6 +8,7 @@ import (
 
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -25,6 +26,7 @@ func (r *Router) buildNodeRoutes() {
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
 	grp.POST(fmt.Sprintf("create/id/:%s/:%s", nodeIDParam, filenameParam), r.createNodeByID)
+	grp.POST("/upload/:"+nodeIDParam, r.uploadFileByID)
 	// list/id/
 	// content/id/
 }
@@ -83,6 +85,41 @@ func (r *Router) createNodeByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"node_id": createdNode.ID, "created": created})
+}
+
+func (r *Router) uploadFileByID(c *gin.Context) {
+	authContext := getAuthContext(c)
+	nodeID, fcerr := extractNodeID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		logrus.WithError(err).Error("No file attached to upload")
+		fcerr = fcerror.NewError(fcerror.ErrBadRequest, err)
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	tmpPath := utils.JoinPaths(r.cfg.GetFileStorageTempBasePath(), utils.GenerateRandomString(10))
+	err = c.SaveUploadedFile(file, tmpPath)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to save upload to temp file")
+		fcerr = fcerror.NewError(fcerror.ErrCopyFileFailed, err)
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	fcerr = r.managers.Node.UploadFileByID(authContext, nodeID, tmpPath)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	c.JSON(http.StatusOK, &gin.H{})
 }
 
 func extractNodeID(c *gin.Context) (nodeID models.NodeID, fcerr *fcerror.Error) {

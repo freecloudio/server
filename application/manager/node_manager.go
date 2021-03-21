@@ -15,6 +15,8 @@ type NodeManager interface {
 	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
 	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
 	CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (*models.Node, bool, *fcerror.Error)
+	UploadFile(authCtx *authorization.Context, parentNodeID models.NodeID, name, uploadFilePath string) (*models.Node, bool, *fcerror.Error)
+	UploadFileByID(authCtx *authorization.Context, nodeID models.NodeID, uploadFilePath string) *fcerror.Error
 	Close()
 }
 
@@ -83,8 +85,6 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType mode
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
-	// TODO: Check if already existing
-
 	node, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, nodeType, parentNodeID, name)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create node")
@@ -100,6 +100,33 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType mode
 		logrus.WithError(fcerr).WithField("node", node).Error("Failed to create empty file or folder")
 	}
 
+	return
+}
+
+func (mgr *nodeManager) UploadFile(authCtx *authorization.Context, parentNodeID models.NodeID, name, uploadFilePath string) (node *models.Node, created bool, fcerr *fcerror.Error) {
+	node, created, fcerr = mgr.CreateNode(authCtx, models.NodeTypeFile, parentNodeID, name)
+	if fcerr != nil {
+		return
+	}
+
+	fcerr = mgr.UploadFileByID(authCtx, node.ID, uploadFilePath)
+	if fcerr != nil {
+		return
+	}
+	return
+}
+
+func (mgr *nodeManager) UploadFileByID(authCtx *authorization.Context, nodeID models.NodeID, uploadFilePath string) (fcerr *fcerror.Error) {
+	node, fcerr := mgr.GetNodeByID(authCtx, nodeID)
+	if fcerr != nil {
+		return
+	}
+
+	fcerr = mgr.fileStorage.CopyFileFromUpload(node, uploadFilePath)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithField("node", node).Error("Failed to copy file from upload")
+		return
+	}
 	return
 }
 

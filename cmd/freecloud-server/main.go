@@ -21,6 +21,12 @@ import (
 func main() {
 	cfg := viperplg.InitViperConfig()
 
+	// TODO: Tmp cleanup
+	err := os.Mkdir(cfg.GetFileStorageTempBasePath(), 0770)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to create temp dir - abort")
+	}
+
 	authPersistence, fcerr := neo.CreateAuthPersistence(cfg)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Fatal("Failed to initialize neo auth persistence plugin - abort")
@@ -44,7 +50,7 @@ func main() {
 	userMgr := manager.NewUserManager(cfg, userPersistence, managers)
 	nodeMgr := manager.NewNodeManager(cfg, nodePersistence, localFSFileStorage, managers)
 
-	router := gin.NewRouter(managers, ":8080")
+	router := gin.NewRouter(managers, cfg, ":8080")
 
 	go func() {
 		if err := router.Serve(); err != nil && err != http.ErrServerClosed {
