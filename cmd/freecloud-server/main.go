@@ -22,7 +22,7 @@ func main() {
 	cfg := viperplg.InitViperConfig()
 
 	// TODO: Tmp cleanup
-	err := os.Mkdir(cfg.GetFileStorageTempBasePath(), 0770)
+	err := os.MkdirAll(cfg.GetFileStorageTempBasePath(), 0770)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to create temp dir - abort")
 	}

@@ -1,11 +1,11 @@
 _type: export
 __export_format: 4
-__export_date: 2021-03-17T21:06:03.885Z
+__export_date: 2021-03-21T17:13:32.279Z
 __export_source: insomnia.desktop.app:v2020.5.2
 resources:
   - _id: req_46d8f39ea4bd4913b0814e593994aab7
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1616014572691
+    modified: 1616099450102
     created: 1615734480621
     url: "{{base_url}}/api/node/create/id/{% response 'body',
       'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60
@@ -19,6 +19,7 @@ resources:
         value: ""
         description: ""
         id: pair_0787e522be1f48188a6c33dadf86e071
+        disabled: false
     headers: []
     authentication:
       type: bearer
@@ -98,9 +99,81 @@ resources:
     settingRebuildPath: true
     settingFollowRedirects: global
     _type: request
+  - _id: req_7cf745b990f84aa481a3698131a69b7c
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1616346385035
+    created: 1616345434829
+    url: "{{base_url}}/api/node/upload/id/{% prompt 'Node ID', '', '', '', false,
+      true %}"
+    name: Upload By Node ID
+    description: ""
+    method: POST
+    body:
+      mimeType: multipart/form-data
+      params:
+        - name: file
+          value: ""
+          description: ""
+          id: pair_97bf4ee1b278405780c303c2fc4eea1a
+          type: file
+          multiline: null
+          fileName: /home/max/Projects/fc-server/insomnia.yaml
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: multipart/form-data
+        id: pair_3421248ce65241f681eb497ca0297d9c
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813138.25
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_07e0623b670d4a179a7eaed50aabe801
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1616346637002
+    created: 1616346561016
+    url: "{{base_url}}/api/node/upload/id/{% prompt 'Parent Node ID', '', '', '',
+      false, true %}/{% prompt 'Filename', '', '', '', false, true %}"
+    name: Upload By Parent Node ID
+    description: ""
+    method: POST
+    body:
+      mimeType: multipart/form-data
+      params:
+        - name: file
+          value: ""
+          description: ""
+          id: pair_97bf4ee1b278405780c303c2fc4eea1a
+          type: file
+          multiline: null
+          fileName: /home/max/Projects/fc-server/insomnia.yaml
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: multipart/form-data
+        id: pair_3421248ce65241f681eb497ca0297d9c
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1590153453010.625
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
   - _id: req_408d1d59221044c1a6b61db7d388ee77
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1614273587208
+    modified: 1616093097909
     created: 1614273555845
     url: "{{base_url}}/api/auth/login"
     name: Login
@@ -163,7 +236,7 @@ resources:
     _type: request
   - _id: req_d1062ec6f1bb4f079db01aedc5cdb6a8
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1615057021633
+    modified: 1616099328848
     created: 1614193498889
     url: "{{base_url}}/api/user"
     name: Register New User

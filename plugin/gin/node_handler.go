@@ -26,7 +26,8 @@ func (r *Router) buildNodeRoutes() {
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
 	grp.POST(fmt.Sprintf("create/id/:%s/:%s", nodeIDParam, filenameParam), r.createNodeByID)
-	grp.POST("/upload/:"+nodeIDParam, r.uploadFileByID)
+	grp.POST("/upload/id/:"+nodeIDParam, r.uploadFileByID)
+	grp.POST(fmt.Sprintf("upload/id/:%s/:%s", nodeIDParam, filenameParam), r.uploadFileByParentID)
 	// list/id/
 	// content/id/
 }
@@ -79,6 +80,42 @@ func (r *Router) createNodeByID(c *gin.Context) {
 	}
 
 	createdNode, created, fcerr := r.managers.Node.CreateNode(authContext, nodeType, nodeID, filename)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"node_id": createdNode.ID, "created": created})
+}
+
+func (r *Router) uploadFileByParentID(c *gin.Context) {
+	authContext := getAuthContext(c)
+	parentNodeID, fcerr := extractNodeID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get parentNodeID from request")
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		logrus.WithError(err).Error("No file attached to upload")
+		fcerr = fcerror.NewError(fcerror.ErrBadRequest, err)
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+	filename := c.Param(filenameParam)
+
+	tmpPath := utils.JoinPaths(r.cfg.GetFileStorageTempBasePath(), utils.GenerateRandomString(10))
+	err = c.SaveUploadedFile(file, tmpPath)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to save upload to temp file")
+		fcerr = fcerror.NewError(fcerror.ErrCopyFileFailed, err)
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	createdNode, created, fcerr := r.managers.Node.UploadFile(authContext, parentNodeID, filename, tmpPath)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
