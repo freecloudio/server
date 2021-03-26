@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
@@ -166,12 +165,6 @@ func extractNodeID(c *gin.Context) (nodeID models.NodeID, fcerr *fcerror.Error) 
 		return
 	}
 
-	nodeIDInt, err := strconv.Atoi(nodeIDStr)
-	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrBadRequest, err)
-		return
-	}
-
-	nodeID = models.NodeID(nodeIDInt)
+	nodeID = models.NodeID(nodeIDStr)
 	return
 }

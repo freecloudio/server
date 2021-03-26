@@ -65,9 +65,9 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 	pathSegments = append([]string{""}, pathSegments...)
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
-			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
-			WHERE ID(u) = $user_id AND [n in tail(nodes(p)) | n.name] = $path_segments
-			RETURN n, ID(n) as id, "Folder" IN labels(n) AS is_folder
+			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
+			WHERE [n in tail(nodes(p)) | n.name] = $path_segments
+			RETURN n, "Folder" IN labels(n) AS is_folder
 		`, len(pathSegments)),
 		map[string]interface{}{
 			"user_id":       userID,
@@ -78,20 +78,12 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 		return
 	}
 
-	nodeIDInt, ok := record.Get("id")
-	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
-		return
-	}
-	nodeID := models.NodeID(nodeIDInt.(int64))
-
-	return tx.fillNodeInfo(record, userID, nodeID, path)
+	return tx.fillNodeInfo(record, userID, path)
 }
 
 func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node)
-			WHERE ID(u) = $user_id AND ID(n) = $node_id
+			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node {id: $node_id})
 			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as path
 		`,
 		map[string]interface{}{
@@ -110,17 +102,16 @@ func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.N
 	}
 	path := pathInt.(string)
 
-	return tx.fillNodeInfo(record, userID, nodeID, path)
+	return tx.fillNodeInfo(record, userID, path)
 }
 
-func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.UserID, nodeID models.NodeID, path string) (node *models.Node, fcerr *fcerror.Error) {
+func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
 	node = &models.Node{}
 	fcerr = recordToModel(record, "n", node)
 	if fcerr != nil {
 		return
 	}
 
-	node.ID = nodeID
 	node.Path, _ = utils.SplitPath(path)
 	node.FullPath = path
 	node.PerspectiveUserID = userID
@@ -147,9 +138,8 @@ func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.U
 
 func (tx *nodeReadTransaction) getOwnerOfNodeID(nodeID models.NodeID) (userID models.UserID, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-			MATCH (u:User)-[:HAS_ROOT_FOLDER|CONTAINS*]->(n:Node)
-			WHERE ID(n) = $node_id
-			RETURN ID(u) as id
+			MATCH (u:User)-[:HAS_ROOT_FOLDER|CONTAINS*]->(n:Node {id: $node_id})
+			RETURN u.id as id
 		`,
 		map[string]interface{}{
 			"node_id": nodeID,
@@ -164,7 +154,7 @@ func (tx *nodeReadTransaction) getOwnerOfNodeID(nodeID models.NodeID) (userID mo
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
 		return
 	}
-	userID = models.UserID(userIDInt.(int64))
+	userID = models.UserID(userIDInt.(string))
 	return
 }
 
@@ -180,8 +170,7 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 	}
 
 	res, err := tx.neoTx.Run(`
-		MATCH (u:User)
-		WHERE ID(u) = $user_id
+		MATCH (u:User {id: $user_id})
 		MERGE (u)-[:HAS_ROOT_FOLDER]->(f:Node:Folder)
 		ON CREATE
 			SET f = $f
@@ -214,12 +203,11 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 	}
 
 	result, err := tx.neoTx.Run(fmt.Sprintf(`
-			MATCH p = (u:User)-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder)
-			WHERE ID(u) = $user_id AND ID(f) = $parent_node_id
+			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder {id: $parent_node_id})
 			MERGE (f)-[:CONTAINS]->(n:Node:%s {name: $n.name})
 			ON CREATE
 				SET n = $n
-			RETURN ID(n) as id, n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as parent_path
+			RETURN "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as parent_path
 		`, insertNodeType),
 		map[string]interface{}{
 			"user_id":        userID,
@@ -237,13 +225,6 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		created = true
 	}
 
-	nodeIDInt, ok := record.Get("id")
-	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in record"))
-		return
-	}
-	nodeID := models.NodeID(nodeIDInt.(int64))
-
 	parentPathInt, ok := record.Get("parent_path")
 	if !ok {
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("parent_path not found in record"))
@@ -251,6 +232,6 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 	}
 	path := utils.JoinPaths(parentPathInt.(string), name)
 
-	node, fcerr = tx.fillNodeInfo(record, userID, nodeID, path)
+	node, fcerr = tx.fillNodeInfo(record, userID, path)
 	return
 }

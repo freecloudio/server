@@ -109,14 +109,12 @@ func TestGetOwnUserEndpoint(t *testing.T) {
 func TestGetUserByIDEndpoint(t *testing.T) {
 	tests := []struct {
 		name         string
-		input        string
 		inputID      models.UserID
 		success      bool
 		expectedCode int
 	}{
-		{name: "valid user id", input: "1", inputID: models.UserID(1), success: true, expectedCode: http.StatusOK},
-		{name: "invalid user id", input: "asd", success: false, expectedCode: http.StatusBadRequest},
-		{name: "failed to get", input: "1", inputID: models.UserID(1), success: false, expectedCode: http.StatusInternalServerError},
+		{name: "valid user id", inputID: models.UserID("1"), success: true, expectedCode: http.StatusOK},
+		{name: "failed to get", inputID: models.UserID("1"), success: false, expectedCode: http.StatusInternalServerError},
 	}
 
 	for it := range tests {
@@ -126,9 +124,9 @@ func TestGetUserByIDEndpoint(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockUserMgr := mock.NewMockUserManager(mockCtrl)
-			if test.success && test.inputID != models.UserID(0) {
+			if test.success && test.inputID != models.UserID("0") {
 				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(&models.User{}, nil).Times(1)
-			} else if test.inputID != models.UserID(0) {
+			} else if test.inputID != models.UserID("0") {
 				mockUserMgr.EXPECT().GetUserByID(gomock.Any(), test.inputID).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
@@ -138,9 +136,9 @@ func TestGetUserByIDEndpoint(t *testing.T) {
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
 
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/user/%s", testSrv.URL, test.input), nil)
+			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/user/%s", testSrv.URL, test.inputID), nil)
 			require.Nil(t, err, "Failed creating get user by id request")
-			req.Header.Add("Authorization", test.input)
+			req.Header.Add("Authorization", string(test.inputID))
 
 			resp, err := http.DefaultClient.Do(req)
 

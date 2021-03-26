@@ -48,8 +48,8 @@ func initializeNeo(cfg config.Config) (fcerr *fcerror.Error) {
 
 	fcerr = initializeConstraintsAndIndexes()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to initialize neo constraints - continue without")
-		fcerr = nil
+		logrus.WithError(fcerr).Error("Failed to initialize neo constraints")
+		return
 	}
 
 	return
@@ -172,14 +172,27 @@ func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 				continue
 			}
 
-			if isUniqueField(typeField) {
+			uuidField := isUUIDField(typeField)
+
+			if isUniqueField(typeField) || uuidField {
 				insertConfig(txCtx, NeoConfigUniqueConstraint, constraint.label, *dbNamePtr)
 			}
 			if isIndexField(typeField) {
 				insertConfig(txCtx, NeoConfigIndex, constraint.label, *dbNamePtr)
 			}
-			if neoEdition == NeoEditionEnterprise && !isOptionalField(typeField) {
+			if neoEdition == NeoEditionEnterprise && (!isOptionalField(typeField) || uuidField) {
 				insertConfig(txCtx, NeoConfigPropertyConstraint, constraint.label, *dbNamePtr)
+			}
+			if uuidField {
+				fcerr = txCtx.Commit()
+				if fcerr != nil {
+					return
+				}
+				txCtx, fcerr = newTransactionContext(neo4j.AccessModeWrite)
+				if fcerr != nil {
+					return
+				}
+				installApocUuid(txCtx, constraint.label, *dbNamePtr)
 			}
 		}
 	}
@@ -217,6 +230,17 @@ func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, proper
 	}
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{"variant": variantName, "label": label, "property": property}).Error("Failed to create constraint")
+	}
+}
+
+func installApocUuid(txCtx *transactionCtx, label, property string) {
+	query := "CALL apoc.uuid.install('%s', {uuidProperty: '%s'}) YIELD label RETURN label"
+	res, err := txCtx.neoTx.Run(fmt.Sprintf(query, label, property), nil)
+	if err == nil {
+		_, err = res.Consume()
+	}
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to install apoc uuid")
 	}
 }
 
@@ -295,8 +319,8 @@ func recordToModel(record neo4j.Record, key string, model interface{}) *fcerror.
 		}
 		var propVal reflect.Value
 		switch valField.Type() {
-		case reflect.TypeOf((models.UserID)(0)):
-			propVal = reflect.ValueOf(models.UserID(propInt.(int64)))
+		case reflect.TypeOf((models.UserID)("")):
+			propVal = reflect.ValueOf(models.UserID(propInt.(string)))
 		case reflect.TypeOf((models.Token)("")):
 			propVal = reflect.ValueOf(models.Token(propInt.(string)))
 		case reflect.TypeOf((models.NodeMimeType)("")):
@@ -337,40 +361,32 @@ func getDBFieldName(typeField reflect.StructField) *string {
 	}
 }
 
-func isUniqueField(typeField reflect.StructField) bool {
-	if getDBFieldName(typeField) == nil {
-		return false
-	}
+func isUUIDField(typeField reflect.StructField) bool {
+	return fieldHasNeoTag(typeField, "uuid", false)
+}
 
-	tagParts := strings.SplitN(typeField.Tag.Get("fc_neo"), ",", 2)
-	if len(tagParts) < 2 {
-		return false
-	}
-	return strings.Contains(tagParts[1], "unique")
+func isUniqueField(typeField reflect.StructField) bool {
+	return fieldHasNeoTag(typeField, "unique", false)
 }
 
 func isOptionalField(typeField reflect.StructField) bool {
-	if getDBFieldName(typeField) == nil {
-		return true
-	}
-
-	tagParts := strings.SplitN(typeField.Tag.Get("fc_neo"), ",", 2)
-	if len(tagParts) < 2 {
-		return false
-	}
-	return strings.Contains(tagParts[1], "optional")
+	return fieldHasNeoTag(typeField, "optional", true)
 }
 
 func isIndexField(typeField reflect.StructField) bool {
+	return fieldHasNeoTag(typeField, "index", false)
+}
+
+func fieldHasNeoTag(typeField reflect.StructField, tagName string, noDBTagDef bool) bool {
 	if getDBFieldName(typeField) == nil {
-		return false
+		return noDBTagDef
 	}
 
 	tagParts := strings.SplitN(typeField.Tag.Get("fc_neo"), ",", 2)
 	if len(tagParts) < 2 {
 		return false
 	}
-	return strings.Contains(tagParts[1], "index")
+	return strings.Contains(tagParts[1], tagName)
 }
 
 func isNotFoundError(err error) bool {

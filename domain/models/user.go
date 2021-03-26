@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-type UserID int64
+type UserID string
 
 type User struct {
-	ID      UserID    `json:"id" fc_neo:"-"`
+	ID      UserID    `json:"id" fc_neo:",uuid"`
 	Created time.Time `json:"created"`
 	Updated time.Time `json:"updated"`
 

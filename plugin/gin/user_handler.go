@@ -3,7 +3,6 @@ package gin
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
@@ -81,12 +80,6 @@ func extractUserID(c *gin.Context) (userID models.UserID, fcerr *fcerror.Error) 
 		return
 	}
 
-	userIDInt, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrBadRequest, err)
-		return
-	}
-
-	userID = models.UserID(userIDInt)
+	userID = models.UserID(userIDStr)
 	return
 }

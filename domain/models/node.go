@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type NodeID int64
+type NodeID string
 type NodeType string
 type NodeMimeType string
 
@@ -14,7 +14,7 @@ const (
 )
 
 type Node struct {
-	ID      NodeID    `json:"id" fc_neo:"-"`
+	ID      NodeID    `json:"id" fc_neo:",uuid"`
 	Created time.Time `json:"created"`
 	Updated time.Time `json:"updated"`
 

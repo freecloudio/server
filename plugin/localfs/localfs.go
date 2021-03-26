@@ -33,7 +33,7 @@ func (*LocalFSStorage) Close() *fcerror.Error {
 }
 
 func (fs *LocalFSStorage) getUserFolder(userID models.UserID) string {
-	return utils.JoinPaths(fs.basepath, fmt.Sprintf("%d", userID))
+	return utils.JoinPaths(fs.basepath, fmt.Sprintf("%s", userID))
 }
 
 func (fs *LocalFSStorage) getUserNodePath(node *models.Node) string {

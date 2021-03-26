@@ -83,8 +83,8 @@ func TestGetNodeInfoByID(t *testing.T) {
 		success      bool
 		expectedCode int
 	}{
-		{name: "Success", input: models.NodeID(1), success: true, expectedCode: http.StatusOK},
-		{name: "Failure", input: models.NodeID(2), success: false, expectedCode: http.StatusNotFound},
+		{name: "Success", input: models.NodeID("1"), success: true, expectedCode: http.StatusOK},
+		{name: "Failure", input: models.NodeID("2"), success: false, expectedCode: http.StatusNotFound},
 	}
 
 	for it := range tests {
@@ -108,7 +108,7 @@ func TestGetNodeInfoByID(t *testing.T) {
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
 
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/node/info/id/%d", testSrv.URL, test.input), nil)
+			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/node/info/id/%s", testSrv.URL, test.input), nil)
 			require.Nil(t, err, "Failed creating get node info by id request")
 			req.Header.Add("Authorization", "Bearer "+string(token))
 
@@ -134,11 +134,11 @@ func TestCreateNodeByID(t *testing.T) {
 		success           bool
 		expectedCode      int
 	}{
-		{name: "Success Existing Folder", inputParentNodeID: models.NodeID(1), success: true, inputFile: false, inputNew: false, expectedCode: http.StatusOK},
-		{name: "Failure Existing Folder", inputParentNodeID: models.NodeID(2), success: false, inputFile: false, inputNew: false, expectedCode: http.StatusNotFound},
-		{name: "Success New File", inputParentNodeID: models.NodeID(2), success: true, inputFile: true, inputNew: true, expectedCode: http.StatusOK},
-		{name: "Failure New File", inputParentNodeID: models.NodeID(2), success: false, inputFile: true, inputNew: true, expectedCode: http.StatusNotFound},
-		{name: "Success Existing File", inputParentNodeID: models.NodeID(2), success: true, inputFile: true, inputNew: false, expectedCode: http.StatusOK},
+		{name: "Success Existing Folder", inputParentNodeID: models.NodeID("1"), success: true, inputFile: false, inputNew: false, expectedCode: http.StatusOK},
+		{name: "Failure Existing Folder", inputParentNodeID: models.NodeID("2"), success: false, inputFile: false, inputNew: false, expectedCode: http.StatusNotFound},
+		{name: "Success New File", inputParentNodeID: models.NodeID("2"), success: true, inputFile: true, inputNew: true, expectedCode: http.StatusOK},
+		{name: "Failure New File", inputParentNodeID: models.NodeID("2"), success: false, inputFile: true, inputNew: true, expectedCode: http.StatusNotFound},
+		{name: "Success Existing File", inputParentNodeID: models.NodeID("2"), success: true, inputFile: true, inputNew: false, expectedCode: http.StatusOK},
 	}
 
 	for it := range tests {
@@ -155,7 +155,7 @@ func TestCreateNodeByID(t *testing.T) {
 				nodeType = models.NodeTypeFile
 			}
 			fileName := utils.GenerateRandomString(10)
-			resultNode := &models.Node{ID: models.NodeID(7)}
+			resultNode := &models.Node{ID: models.NodeID("1")}
 			if test.success {
 				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(resultNode, test.inputNew, nil).Times(1)
 			} else {
@@ -172,7 +172,7 @@ func TestCreateNodeByID(t *testing.T) {
 			if test.inputFile {
 				params = "?file"
 			}
-			req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/node/create/id/%d/%s%s", testSrv.URL, test.inputParentNodeID, fileName, params), nil)
+			req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/node/create/id/%s/%s%s", testSrv.URL, test.inputParentNodeID, fileName, params), nil)
 			require.Nil(t, err, "Failed creating create node by parent id request")
 			req.Header.Add("Authorization", "Bearer "+string(token))
 
@@ -186,7 +186,7 @@ func TestCreateNodeByID(t *testing.T) {
 			err = json.NewDecoder(resp.Body).Decode(&resJSON)
 			require.Nil(t, err, "Failed to decode response JSON")
 			if test.success {
-				assert.Equal(t, float64(resultNode.ID), resJSON["node_id"], "Returned node id does not match")
+				assert.Equal(t, string(resultNode.ID), resJSON["node_id"], "Returned node id does not match")
 				assert.Equal(t, test.inputNew, resJSON["created"], "Returned created flag does not match")
 			}
 		})

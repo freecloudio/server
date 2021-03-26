@@ -81,8 +81,7 @@ func (tx *userReadTransaction) CountUsers() (count int64, fcerr *fcerror.Error) 
 
 func (tx *userReadTransaction) GetUserByID(userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-		MATCH (u:User)
-		WHERE ID(u) = $id
+		MATCH (u:User {id: $id})
 		RETURN u
 	`, map[string]interface{}{"id": userID}))
 	if err != nil {
@@ -102,7 +101,7 @@ func (tx *userReadTransaction) GetUserByID(userID models.UserID) (user *models.U
 func (tx *userReadTransaction) GetUserByEmail(email string) (user *models.User, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
 		MATCH (u:User {email: $email})
-		RETURN u, ID(u) as id
+		RETURN u
 	`, map[string]interface{}{"email": email}))
 	if err != nil {
 		fcerr = neoToFcError(err, fcerror.ErrUserNotFound, fcerror.ErrUnknown)
@@ -114,12 +113,6 @@ func (tx *userReadTransaction) GetUserByEmail(email string) (user *models.User, 
 	if fcerr != nil {
 		return
 	}
-	userIDInt, ok := record.Get("id")
-	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("id not found in records"))
-		return
-	}
-	user.ID = models.UserID(userIDInt.(int64))
 	return
 }
 
@@ -134,7 +127,7 @@ func (tx *userReadWriteTransaction) SaveUser(user *models.User) (fcerr *fcerror.
 
 	record, err := neo4j.Single(tx.neoTx.Run(`
 		CREATE (u:User $user)
-		RETURN ID(u) as id
+		RETURN u.id as id
 		`,
 		map[string]interface{}{
 			"user": modelToMap(user),
@@ -149,7 +142,7 @@ func (tx *userReadWriteTransaction) SaveUser(user *models.User) (fcerr *fcerror.
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
 		return
 	}
-	user.ID = models.UserID(userIDInt.(int64))
+	user.ID = models.UserID(userIDInt.(string))
 
 	return
 }
@@ -159,8 +152,7 @@ func (tx *userReadWriteTransaction) UpdateUser(user *models.User) (fcerr *fcerro
 	user.Updated = currTime
 
 	result, err := tx.neoTx.Run(`
-		MATCH (u:User)
-		WHERE ID(u) = $id
+		MATCH (u:User {id: $id})
 		SET u += $user
 		`,
 		map[string]interface{}{
