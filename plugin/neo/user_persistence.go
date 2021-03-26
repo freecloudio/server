@@ -2,13 +2,13 @@ package neo
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
+	"github.com/google/uuid"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
@@ -124,25 +124,21 @@ func (tx *userReadWriteTransaction) SaveUser(user *models.User) (fcerr *fcerror.
 	currTime := utils.GetCurrentTime()
 	user.Created = currTime
 	user.Updated = currTime
+	user.ID = models.UserID(uuid.NewString())
 
-	record, err := neo4j.Single(tx.neoTx.Run(`
+	result, err := tx.neoTx.Run(`
 		CREATE (u:User $user)
-		RETURN u.id as id
 		`,
 		map[string]interface{}{
 			"user": modelToMap(user),
-		}))
+		})
+	if err == nil {
+		_, err = result.Consume()
+	}
 	if err != nil {
 		fcerr = neoToFcError(err, fcerror.ErrUnknown, fcerror.ErrDBWriteFailed)
 		return
 	}
-
-	userIDInt, ok := record.Get("id")
-	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
-		return
-	}
-	user.ID = models.UserID(userIDInt.(string))
 
 	return
 }

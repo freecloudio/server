@@ -1,6 +1,8 @@
 package neo
 
 import (
+	"fmt"
+
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
@@ -60,7 +62,7 @@ type authReadTransaction struct {
 func (tx *authReadTransaction) GetSessionByToken(token models.Token) (session *models.Session, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
 		MATCH (s:Session {token: $token})<-[:AUTHENTICATES_WITH]-(u:User)
-		RETURN s
+		RETURN s, u.id as user_id
 		`,
 		map[string]interface{}{
 			"token": string(token),
@@ -75,6 +77,13 @@ func (tx *authReadTransaction) GetSessionByToken(token models.Token) (session *m
 	if fcerr != nil {
 		return
 	}
+
+	userIDInt, ok := record.Get("user_id")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, fmt.Errorf("Failed to convert value to userID: %v", record.GetByIndex(0)))
+		return
+	}
+	session.UserID = models.UserID(userIDInt.(string))
 
 	return
 }

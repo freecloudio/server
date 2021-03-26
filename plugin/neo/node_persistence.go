@@ -9,6 +9,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
+	"github.com/google/uuid"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
@@ -164,6 +165,7 @@ type nodeReadWriteTransaction struct {
 
 func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (created bool, fcerr *fcerror.Error) {
 	insertNode := &models.Node{
+		ID:      models.NodeID(uuid.NewString()),
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
 		Name:    "",
@@ -193,6 +195,7 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 
 func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (node *models.Node, created bool, fcerr *fcerror.Error) {
 	insertNode := &models.Node{
+		ID:      models.NodeID(uuid.NewString()),
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
 		Name:    name,
@@ -207,7 +210,7 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 			MERGE (f)-[:CONTAINS]->(n:Node:%s {name: $n.name})
 			ON CREATE
 				SET n = $n
-			RETURN "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as parent_path
+			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as parent_path
 		`, insertNodeType),
 		map[string]interface{}{
 			"user_id":        userID,

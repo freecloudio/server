@@ -172,27 +172,14 @@ func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 				continue
 			}
 
-			uuidField := isUUIDField(typeField)
-
-			if isUniqueField(typeField) || uuidField {
+			if isUniqueField(typeField) {
 				insertConfig(txCtx, NeoConfigUniqueConstraint, constraint.label, *dbNamePtr)
 			}
 			if isIndexField(typeField) {
 				insertConfig(txCtx, NeoConfigIndex, constraint.label, *dbNamePtr)
 			}
-			if neoEdition == NeoEditionEnterprise && (!isOptionalField(typeField) || uuidField) {
+			if neoEdition == NeoEditionEnterprise && !isOptionalField(typeField) {
 				insertConfig(txCtx, NeoConfigPropertyConstraint, constraint.label, *dbNamePtr)
-			}
-			if uuidField {
-				fcerr = txCtx.Commit()
-				if fcerr != nil {
-					return
-				}
-				txCtx, fcerr = newTransactionContext(neo4j.AccessModeWrite)
-				if fcerr != nil {
-					return
-				}
-				installApocUuid(txCtx, constraint.label, *dbNamePtr)
 			}
 		}
 	}
@@ -230,17 +217,6 @@ func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, proper
 	}
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{"variant": variantName, "label": label, "property": property}).Error("Failed to create constraint")
-	}
-}
-
-func installApocUuid(txCtx *transactionCtx, label, property string) {
-	query := "CALL apoc.uuid.install('%s', {uuidProperty: '%s'}) YIELD label RETURN label"
-	res, err := txCtx.neoTx.Run(fmt.Sprintf(query, label, property), nil)
-	if err == nil {
-		_, err = res.Consume()
-	}
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"label": label, "property": property}).Error("Failed to install apoc uuid")
 	}
 }
 
@@ -321,6 +297,8 @@ func recordToModel(record neo4j.Record, key string, model interface{}) *fcerror.
 		switch valField.Type() {
 		case reflect.TypeOf((models.UserID)("")):
 			propVal = reflect.ValueOf(models.UserID(propInt.(string)))
+		case reflect.TypeOf((models.NodeID)("")):
+			propVal = reflect.ValueOf(models.NodeID(propInt.(string)))
 		case reflect.TypeOf((models.Token)("")):
 			propVal = reflect.ValueOf(models.Token(propInt.(string)))
 		case reflect.TypeOf((models.NodeMimeType)("")):
@@ -359,10 +337,6 @@ func getDBFieldName(typeField reflect.StructField) *string {
 	} else {
 		return &(typeField.Name)
 	}
-}
-
-func isUUIDField(typeField reflect.StructField) bool {
-	return fieldHasNeoTag(typeField, "uuid", false)
 }
 
 func isUniqueField(typeField reflect.StructField) bool {

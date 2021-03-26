@@ -7,7 +7,7 @@ import (
 type UserID string
 
 type User struct {
-	ID      UserID    `json:"id" fc_neo:",uuid"`
+	ID      UserID    `json:"id" fc_neo:",unique"`
 	Created time.Time `json:"created"`
 	Updated time.Time `json:"updated"`
 
