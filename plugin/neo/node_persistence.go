@@ -68,7 +68,12 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
 			WHERE [n in tail(nodes(p)) | n.name] = $path_segments
-			RETURN n, "Folder" IN labels(n) AS is_folder
+			WITH n, nodes(p)[-2] as second_last_node
+			RETURN n, "Folder" IN labels(n) AS is_folder,
+				CASE
+					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
+					ELSE NULL
+				END AS parent_node_id
 		`, len(pathSegments)),
 		map[string]interface{}{
 			"user_id":       userID,
@@ -85,7 +90,12 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node {id: $node_id})
-			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as path
+			WITH n, p, nodes(p)[-2] as second_last_node
+			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as path,
+				CASE
+					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
+					ELSE NULL
+				END AS parent_node_id
 		`,
 		map[string]interface{}{
 			"user_id": userID,
@@ -126,6 +136,16 @@ func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.U
 		node.Type = models.NodeTypeFolder
 	} else {
 		node.Type = models.NodeTypeFile
+	}
+
+	parentNodeIDInt, ok := record.Get("parent_node_id")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("parent_node_id not found in record"))
+		return
+	}
+	if parentNodeIDStr, ok := parentNodeIDInt.(string); ok {
+		parentNodeID := models.NodeID(parentNodeIDStr)
+		node.ParentNodeID = &parentNodeID
 	}
 
 	node.OwnerID, fcerr = tx.getOwnerOfNodeID(node.ID)
