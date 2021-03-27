@@ -5,17 +5,14 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 )
 
-var errUnauthorized = fcerror.NewError(fcerror.ErrUnauthorized, nil)
-var errForbidden = fcerror.NewError(fcerror.ErrUnauthorized, nil)
-
 func EnforceSystem(ctx *Context) *fcerror.Error {
 	switch ctx.Type {
 	case ContextTypeSystem:
 		return nil
 	case ContextTypeUser:
-		return errForbidden
+		return fcerror.NewErrorSkipFunc(fcerror.ErrForbidden, nil)
 	default:
-		return errUnauthorized
+		return fcerror.NewErrorSkipFunc(fcerror.ErrUnauthorized, nil)
 	}
 }
 
@@ -27,9 +24,9 @@ func EnforceAdmin(ctx *Context) *fcerror.Error {
 		if ctx.User.IsAdmin {
 			return nil
 		}
-		return errForbidden
+		return fcerror.NewErrorSkipFunc(fcerror.ErrForbidden, nil)
 	default:
-		return errUnauthorized
+		return fcerror.NewErrorSkipFunc(fcerror.ErrUnauthorized, nil)
 	}
 }
 
@@ -38,7 +35,7 @@ func EnforceUser(ctx *Context) *fcerror.Error {
 	case ContextTypeSystem, ContextTypeUser:
 		return nil
 	default:
-		return errUnauthorized
+		return fcerror.NewErrorSkipFunc(fcerror.ErrUnauthorized, nil)
 	}
 }
 
@@ -50,8 +47,8 @@ func EnforceSelf(ctx *Context, targetUserID models.UserID) *fcerror.Error {
 		if ctx.User.IsAdmin || ctx.User.ID == targetUserID {
 			return nil
 		}
-		return errForbidden
+		return fcerror.NewErrorSkipFunc(fcerror.ErrForbidden, nil)
 	default:
-		return errUnauthorized
+		return fcerror.NewErrorSkipFunc(fcerror.ErrUnauthorized, nil)
 	}
 }

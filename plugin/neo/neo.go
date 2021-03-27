@@ -58,7 +58,7 @@ func initializeNeo(cfg config.Config) (fcerr *fcerror.Error) {
 func closeNeo() (fcerr *fcerror.Error) {
 	err := neo.Close()
 	if err != nil {
-		fcerr = fcerror.NewError(fcerror.ErrDBCloseFailed, nil)
+		fcerr = fcerror.NewErrorSkipFunc(fcerror.ErrDBCloseFailed, nil)
 		return
 	}
 	return
@@ -108,7 +108,7 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 		}
 	}
 	if err != nil {
-		return fcerror.NewError(fcerror.ErrDBCommitFailed, err)
+		return fcerror.NewErrorSkipFunc(fcerror.ErrDBCommitFailed, err)
 	} else {
 		return nil
 	}
@@ -371,12 +371,12 @@ func neoToFcError(err error, notfound fcerror.ErrorID, other fcerror.ErrorID) *f
 	if err == nil {
 		return nil
 	} else if isNotFoundError(err) {
-		return fcerror.NewError(notfound, err)
+		return fcerror.NewErrorSkipFunc(notfound, err)
 	} else if neo4j.IsAuthenticationError(err) || neo4j.IsSecurityError(err) {
-		return fcerror.NewError(fcerror.ErrDBAuthentication, err)
+		return fcerror.NewErrorSkipFunc(fcerror.ErrDBAuthentication, err)
 	} else if neo4j.IsServiceUnavailable(err) {
-		return fcerror.NewError(fcerror.ErrDBAuthentication, err)
+		return fcerror.NewErrorSkipFunc(fcerror.ErrDBAuthentication, err)
 	} else {
-		return fcerror.NewError(other, err)
+		return fcerror.NewErrorSkipFunc(other, err)
 	}
 }
