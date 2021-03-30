@@ -18,10 +18,10 @@ type Node struct {
 	Created time.Time `json:"created"`
 	Updated time.Time `json:"updated"`
 
-	Name     string       `json:"name"`
 	Size     int64        `json:"size"`
 	MimeType NodeMimeType `json:"mime_type" fc_neo:",optional"`
 
+	Name         string    `json:"name" fc_neo:"-"`
 	OwnerID      UserID    `json:"owner_id" fc_neo:"-"`
 	ParentNodeID *NodeID   `json:"parent_node_id" fc_neo:"-"`
 	Type         NodeType  `json:"type" fc_neo:"-"`

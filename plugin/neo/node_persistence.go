@@ -15,8 +15,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type containsRelation struct {
+	Name string `json:"name"`
+}
+
 func init() {
-	nodeModelMappings = append(nodeModelMappings, &labelModelMapping{label: "Node", model: &models.Node{}})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "Node", model: &models.Node{}})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "CONTAINS", model: &containsRelation{}})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "CONTAINS_SHARED", model: &containsRelation{}})
 }
 
 type NodePersistence struct{}
@@ -63,18 +69,18 @@ type nodeReadTransaction struct {
 
 func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
 	pathSegments := utils.GetPathSegments(path)
-	pathSegments = append([]string{""}, pathSegments...)
+	relationCount := len(pathSegments) + 1 // Add one for HAS_ROOT_FOLDER
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
-			WHERE [n in tail(nodes(p)) | n.name] = $path_segments
-			WITH n, nodes(p)[-2] as second_last_node
-			RETURN n, "Folder" IN labels(n) AS is_folder,
+			WHERE [n in tail(relationships(p)) | n.name] = $path_segments
+			WITH n, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
+			RETURN n, "Folder" IN labels(n) AS is_folder, last_relationship.name as name,
 				CASE
 					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
 					ELSE NULL
 				END AS parent_node_id
-		`, len(pathSegments)),
+		`, relationCount),
 		map[string]interface{}{
 			"user_id":       userID,
 			"path_segments": pathSegments,
@@ -90,8 +96,10 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node {id: $node_id})
-			WITH n, p, nodes(p)[-2] as second_last_node
-			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as path,
+			WITH n, p, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
+			RETURN n, "Folder" IN labels(n) AS is_folder,
+				reduce(s = "", n in tail(tail(relationships(p))) | s + '/' + n.name) as path,
+				last_relationship.name as name,
 				CASE
 					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
 					ELSE NULL
@@ -126,6 +134,13 @@ func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.U
 	node.Path, _ = utils.SplitPath(path)
 	node.FullPath = path
 	node.PerspectiveUserID = userID
+
+	nameInt, ok := record.Get("name")
+	if !ok {
+		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("name not found in record"))
+		return
+	}
+	node.Name, _ = nameInt.(string)
 
 	isFolderInt, ok := record.Get("is_folder")
 	if !ok {
@@ -188,7 +203,6 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 		ID:      models.NodeID(uuid.NewString()),
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
-		Name:    "",
 	}
 
 	res, err := tx.neoTx.Run(`
@@ -218,24 +232,37 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		ID:      models.NodeID(uuid.NewString()),
 		Created: utils.GetCurrentTime(),
 		Updated: utils.GetCurrentTime(),
-		Name:    name,
+	}
+	insertRelation := &containsRelation{
+		Name: name,
 	}
 	insertNodeType := "File"
 	if nodeType == models.NodeTypeFolder {
 		insertNodeType = "Folder"
 	}
 
+	// TODO: Prevent folder and file with same name
 	result, err := tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder {id: $parent_node_id})
-			MERGE (f)-[:CONTAINS]->(n:Node:%s {name: $n.name})
+			MERGE (f)-[r:CONTAINS {name: $r.name}]->(n:Node:%s)
 			ON CREATE
 				SET n = $n
-			RETURN n, "Folder" IN labels(n) AS is_folder, reduce(s = "", n in tail(tail(nodes(p))) | s + '/' + n.name) as parent_path
-		`, insertNodeType),
+				SET r = $r
+			WITH n, r, p, nodes(p)[-2] as second_last_node
+			RETURN n,
+				"Folder" IN labels(n) AS is_folder,
+				reduce(s = "", n in tail(tail(relationships(p))) | s + '/' + n.name) as parent_path,
+				r.name as name,
+				CASE
+					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
+					ELSE NULL
+				END AS parent_node_id
+		`, insertNodeType), // TODO: Fix parent path
 		map[string]interface{}{
 			"user_id":        userID,
 			"parent_node_id": parentNodeID,
 			"n":              modelToMap(insertNode),
+			"r":              modelToMap(insertRelation),
 		})
 	record, err := neo4j.Single(result, err)
 	if err != nil {
@@ -253,7 +280,11 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("parent_path not found in record"))
 		return
 	}
-	path := utils.JoinPaths(parentPathInt.(string), name)
+	path := "/"
+	parentPathStr, ok := parentPathInt.(string)
+	if ok {
+		path = utils.JoinPaths(parentPathStr, name)
+	}
 
 	node, fcerr = tx.fillNodeInfo(record, userID, path)
 	return

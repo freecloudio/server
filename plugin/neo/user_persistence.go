@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	nodeModelMappings = append(nodeModelMappings, &labelModelMapping{label: "User", model: &models.User{}})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "User", model: &models.User{}})
 }
 
 type UserPersistence struct{}

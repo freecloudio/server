@@ -148,7 +148,7 @@ type labelModelMapping struct {
 }
 
 // List of labels mapped to models filled in 'init' functions of each repository
-var nodeModelMappings []*labelModelMapping
+var labelModelMappings []*labelModelMapping
 
 func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 	neoEdition, fcerr := fetchNeoEdition()
@@ -161,7 +161,7 @@ func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
 		return
 	}
 
-	for _, constraint := range nodeModelMappings {
+	for _, constraint := range labelModelMappings {
 		modelValue := reflect.ValueOf(constraint.model).Elem()
 		modelType := modelValue.Type()
 

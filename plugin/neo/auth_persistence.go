@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	nodeModelMappings = append(nodeModelMappings, &labelModelMapping{label: "Session", model: &models.Session{}})
+	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "Session", model: &models.Session{}})
 }
 
 type AuthPersistence struct{}

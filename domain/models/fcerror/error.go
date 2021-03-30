@@ -67,8 +67,8 @@ func NewErrorSkipFunc(id ErrorID, cause error) *Error {
 }
 
 func newError(id ErrorID, cause error, skipCaller bool) *Error {
-	// Skip only this func or one more for location
-	skipPC := 1
+	// Skip this func + wrapper + one more if skipCaller is true
+	skipPC := 2
 	if skipCaller {
 		skipPC++
 	}
