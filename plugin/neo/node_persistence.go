@@ -71,7 +71,7 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 	relationCount := len(pathSegments) + 1 // Add one for HAS_ROOT_FOLDER
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
-			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS*%d]->(n:Node)
+			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
 			WHERE [n in tail(relationships(p)) | n.name] = $path_segments
 			WITH n, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
 			RETURN n, "Folder" IN labels(n) AS is_folder, last_relationship.name as name,
@@ -94,7 +94,7 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 
 func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
 	record, err := neo4j.Single(tx.neoTx.Run(`
-			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS*]->(n:Node {id: $node_id})
+			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node {id: $node_id})
 			WITH n, p, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
 			RETURN n, "Folder" IN labels(n) AS is_folder,
 				reduce(s = "", n in tail(relationships(p)) | s + '/' + n.name) as path,
@@ -244,7 +244,7 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 	}
 
 	result, err := tx.neoTx.Run(fmt.Sprintf(`
-			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS*]->(f:Node:Folder {id: $parent_node_id})
+			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder {id: $parent_node_id})
 			MERGE (f)-[r:CONTAINS {name: $r.name}]->(n:Node)
 			ON CREATE
 				SET n:%s
