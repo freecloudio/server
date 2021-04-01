@@ -98,7 +98,7 @@ func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.N
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node {id: $node_id})
 			WITH n, p, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
 			RETURN n, "Folder" IN labels(n) AS is_folder,
-				reduce(s = "", n in tail(tail(relationships(p))) | s + '/' + n.name) as path,
+				reduce(s = "", n in tail(relationships(p)) | s + '/' + n.name) as path,
 				last_relationship.name as name,
 				CASE
 					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
@@ -131,6 +131,9 @@ func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.U
 		return
 	}
 
+	if path == "" {
+		path = "/"
+	}
 	node.Path, _ = utils.SplitPath(path)
 	node.FullPath = path
 	node.PerspectiveUserID = userID
@@ -241,23 +244,20 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		insertNodeType = "Folder"
 	}
 
-	// TODO: Prevent folder and file with same name
 	result, err := tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(f:Node:Folder {id: $parent_node_id})
-			MERGE (f)-[r:CONTAINS {name: $r.name}]->(n:Node:%s)
+			MERGE (f)-[r:CONTAINS {name: $r.name}]->(n:Node)
 			ON CREATE
+				SET n:%s
 				SET n = $n
 				SET r = $r
-			WITH n, r, p, nodes(p)[-2] as second_last_node
+			WITH n, r, p
 			RETURN n,
 				"Folder" IN labels(n) AS is_folder,
-				reduce(s = "", n in tail(tail(relationships(p))) | s + '/' + n.name) as parent_path,
+				reduce(s = "", n in tail(relationships(p)) | s + '/' + n.name) as parent_path,
 				r.name as name,
-				CASE
-					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
-					ELSE NULL
-				END AS parent_node_id
-		`, insertNodeType), // TODO: Fix parent path
+				$parent_node_id AS parent_node_id
+		`, insertNodeType),
 		map[string]interface{}{
 			"user_id":        userID,
 			"parent_node_id": parentNodeID,
@@ -280,11 +280,11 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("parent_path not found in record"))
 		return
 	}
-	path := "/"
-	parentPathStr, ok := parentPathInt.(string)
-	if ok {
-		path = utils.JoinPaths(parentPathStr, name)
+	path := parentPathInt.(string)
+	if path == "" {
+		path = "/"
 	}
+	path = utils.JoinPaths(path, name)
 
 	node, fcerr = tx.fillNodeInfo(record, userID, path)
 	return

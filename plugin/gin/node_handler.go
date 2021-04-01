@@ -84,7 +84,7 @@ func (r *Router) createNodeByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"node_id": createdNode.ID, "created": created})
+	c.JSON(http.StatusOK, gin.H{"node": createdNode, "created": created})
 }
 
 func (r *Router) uploadFileByParentID(c *gin.Context) {
