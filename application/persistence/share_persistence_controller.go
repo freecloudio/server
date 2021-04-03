@@ -12,10 +12,11 @@ type SharePersistenceController interface {
 
 type SharePersistenceReadTransaction interface {
 	ReadTransaction
+	NodeContainsNestedShares(nodeID models.NodeID) (bool, *fcerror.Error)
 }
 
 type SharePersistenceReadWriteTransaction interface {
 	ReadWriteTransaction
 	SharePersistenceReadTransaction
-	CreateShare(userID models.UserID, share *models.Share) (bool, *fcerror.Error)
+	CreateShare(userID models.UserID, share *models.Share, insertName string) (bool, *fcerror.Error)
 }

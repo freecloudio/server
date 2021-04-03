@@ -1,7 +1,8 @@
 package manager
 
 type Managers struct {
-	Auth AuthManager
-	User UserManager
-	Node NodeManager
+	Auth  AuthManager
+	User  UserManager
+	Node  NodeManager
+	Share ShareManager
 }

@@ -1,8 +1,6 @@
 package neo
 
 import (
-	"errors"
-
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
@@ -58,33 +56,7 @@ type shareReadTransaction struct {
 	*transactionCtx
 }
 
-type shareReadWriteTransaction struct {
-	shareReadTransaction
-}
-
-func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *models.Share) (created bool, fcerr *fcerror.Error) {
-	// userID -> share.nodeID WITHOUT any SHARED
-	record, err := neo4j.Single(tx.neoTx.Run(`
-		MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS*]->(n:Node {id: $node_id})
-		WITH relationships(p)[-1] AS last_relationship
-		RETURN last_relationship.name AS node_name
-		`,
-		map[string]interface{}{
-			"user_id": userID,
-			"node_id": share.NodeID,
-		}))
-	if err != nil {
-		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
-		return
-	}
-
-	nodeNameInt, ok := record.Get("node_name")
-	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("node_name not found in record"))
-		return
-	}
-
-	// share.nodeID -> * WITHOUT any SHARED
+func (tx *shareReadTransaction) NodeContainsNestedShares(nodeID models.NodeID) (containsShared bool, fcerr *fcerror.Error) {
 	res, err := tx.neoTx.Run(`
 		MATCH p = (:Node {id: $node_id})-[:CONTAINS|CONTAINS_SHARED*]->(n:Node)
 		WITH reduce(x = false, t IN relationships(p) | TYPE(t) = "CONTAINS") AS contains_shared
@@ -92,19 +64,25 @@ func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *mo
 		RETURN contains_shared
 		`,
 		map[string]interface{}{
-			"node_id": share.NodeID,
+			"node_id": nodeID,
 		})
 	if err != nil {
 		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
 		return
 	}
 	if res.Next() {
-		fcerr = fcerror.NewError(fcerror.ErrShareContainsOtherShares, nil)
+		containsShared = true
 	}
+	return
+}
 
+type shareReadWriteTransaction struct {
+	shareReadTransaction
+}
+
+func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *models.Share, insertName string) (created bool, fcerr *fcerror.Error) {
 	// TODO: Check that nodeName is not already used in root folder
-
-	res, err = tx.neoTx.Run(`
+	res, err := tx.neoTx.Run(`
 			MATCH (u:User {id: $user_id})-[:HAS_ROOT_FOLDER]->(f:Node:Folder)
 			MERGE (f)-[r:CONTAINS_SHARED {name: $node_name}]->(n:Node {id: $node_id})
 			ON CREATE
@@ -112,7 +90,7 @@ func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *mo
 		`,
 		map[string]interface{}{
 			"user_id":   share.SharedWithID,
-			"node_name": nodeNameInt,
+			"node_name": insertName,
 			"node_id":   share.NodeID,
 			"share":     modelToMap(share),
 		})

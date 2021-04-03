@@ -66,12 +66,17 @@ type nodeReadTransaction struct {
 	*transactionCtx
 }
 
-func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
+func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, withShared bool) (node *models.Node, fcerr *fcerror.Error) {
 	pathSegments := utils.GetPathSegments(path)
 	relationCount := len(pathSegments) + 1 // Add one for HAS_ROOT_FOLDER
 
+	relLabels := "HAS_FOLDER|CONTAINS"
+	if withShared {
+		relLabels += "|CONTAINS_SHARED"
+	}
+
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
-			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*%d]->(n:Node)
+			MATCH p = (u:User {id: $user_id})-[:%s*%d]->(n:Node)
 			WHERE [n in tail(relationships(p)) | n.name] = $path_segments
 			WITH n, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
 			RETURN n, "Folder" IN labels(n) AS is_folder, last_relationship.name as name,
@@ -79,7 +84,7 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
 					ELSE NULL
 				END AS parent_node_id
-		`, relationCount),
+		`, relLabels, relationCount),
 		map[string]interface{}{
 			"user_id":       userID,
 			"path_segments": pathSegments,
@@ -92,9 +97,14 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string) 
 	return tx.fillNodeInfo(record, userID, path)
 }
 
-func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID) (node *models.Node, fcerr *fcerror.Error) {
-	record, err := neo4j.Single(tx.neoTx.Run(`
-			MATCH p = (u:User {id: $user_id})-[:HAS_ROOT_FOLDER|CONTAINS|CONTAINS_SHARED*]->(n:Node {id: $node_id})
+func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID, withShared bool) (node *models.Node, fcerr *fcerror.Error) {
+	relLabels := "HAS_FOLDER|CONTAINS"
+	if withShared {
+		relLabels += "|CONTAINS_SHARED"
+	}
+
+	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
+			MATCH p = (u:User {id: $user_id})-[:%s*]->(n:Node {id: $node_id})
 			WITH n, p, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
 			RETURN n, "Folder" IN labels(n) AS is_folder,
 				reduce(s = "", n in tail(relationships(p)) | s + '/' + n.name) as path,
@@ -103,7 +113,7 @@ func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.N
 					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
 					ELSE NULL
 				END AS parent_node_id
-		`,
+		`, relLabels),
 		map[string]interface{}{
 			"user_id": userID,
 			"node_id": nodeID,

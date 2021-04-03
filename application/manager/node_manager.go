@@ -145,7 +145,7 @@ func (mgr *nodeManager) GetNodeByPath(authCtx *authorization.Context, path strin
 	}
 	defer trans.Close()
 
-	node, fcerr = trans.GetNodeByPath(authCtx.User.ID, path)
+	node, fcerr = trans.GetNodeByPath(authCtx.User.ID, path, true)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
 		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "path": path}).Error("Failed to get node for path")
 		return
@@ -167,7 +167,7 @@ func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, nodeID model
 	}
 	defer trans.Close()
 
-	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID)
+	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID, true)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
 		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
 		return
