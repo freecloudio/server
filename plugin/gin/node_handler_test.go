@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -154,12 +155,11 @@ func TestCreateNodeByID(t *testing.T) {
 			if test.inputFile {
 				nodeType = models.NodeTypeFile
 			}
-			fileName := utils.GenerateRandomString(10)
-			resultNode := &models.Node{ID: models.NodeID("1")}
+			node := &models.Node{ID: models.NodeID("1"), ParentNodeID: &test.inputParentNodeID, Name: utils.GenerateRandomString(10), Type: nodeType}
 			if test.success {
-				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(resultNode, test.inputNew, nil).Times(1)
+				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), node).Return(test.inputNew, node, nil).Times(1)
 			} else {
-				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), nodeType, test.inputParentNodeID, fileName).Return(nil, test.inputNew, fcerror.NewError(fcerror.ErrNodeNotFound, nil)).Times(1)
+				mockNodeMgr.EXPECT().CreateNode(gomock.Any(), node).Return(test.inputNew, nil, fcerror.NewError(fcerror.ErrNodeNotFound, nil)).Times(1)
 			}
 
 			managers := &manager.Managers{Node: mockNodeMgr, Auth: mockAuthMgr}
@@ -168,11 +168,9 @@ func TestCreateNodeByID(t *testing.T) {
 			testSrv := httptest.NewServer(router.engine)
 			defer testSrv.Close()
 
-			params := ""
-			if test.inputFile {
-				params = "?file"
-			}
-			req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/node/create/id/%s/%s%s", testSrv.URL, test.inputParentNodeID, fileName, params), nil)
+			jsonNode, err := json.Marshal(node)
+			require.Nil(t, err, "Failed creating json from node")
+			req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/node/create/", testSrv.URL), bytes.NewReader(jsonNode))
 			require.Nil(t, err, "Failed creating create node by parent id request")
 			req.Header.Add("Authorization", "Bearer "+string(token))
 
@@ -186,7 +184,7 @@ func TestCreateNodeByID(t *testing.T) {
 			err = json.NewDecoder(resp.Body).Decode(&resJSON)
 			require.Nil(t, err, "Failed to decode response JSON")
 			if test.success {
-				assert.Equal(t, string(resultNode.ID), resJSON["node_id"], "Returned node id does not match")
+				assert.Equal(t, string(node.ID), resJSON["node_id"], "Returned node id does not match")
 				assert.Equal(t, test.inputNew, resJSON["created"], "Returned created flag does not match")
 			}
 		})

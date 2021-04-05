@@ -53,7 +53,7 @@ func (mgr *shareManager) ShareNodeByID(authCtx *authorization.Context, share *mo
 		return
 	}
 
-	shareNode, fcerr := nodeTrans.GetNodeByID(authCtx.User.ID, share.NodeID, false)
+	shareNode, fcerr := nodeTrans.GetNodeByID(authCtx.User.ID, share.NodeID, models.ShareModeRead)
 	if fcerr != nil || fcerr.ID != fcerror.ErrNodeNotFound {
 		logrus.WithError(fcerr).WithField("share", share).Error("Failed to get shareNode")
 		return

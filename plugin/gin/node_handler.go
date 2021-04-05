@@ -2,7 +2,6 @@ package gin
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/freecloudio/server/domain/models"
@@ -24,9 +23,9 @@ func (r *Router) buildNodeRoutes() {
 
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
-	grp.POST(fmt.Sprintf("create/id/:%s/:%s", nodeIDParam, filenameParam), r.createNodeByID)
+	grp.POST("create/", r.createNodeByID)
 	grp.POST("/upload/id/:"+nodeIDParam, r.uploadFileByID)
-	grp.POST(fmt.Sprintf("upload/id/:%s/:%s", nodeIDParam, filenameParam), r.uploadFileByParentID)
+	grp.POST("upload/", r.uploadFileByParentID)
 	// list/id/
 	// content/id/
 }
@@ -64,21 +63,16 @@ func (r *Router) getNodeInfoByID(c *gin.Context) {
 
 func (r *Router) createNodeByID(c *gin.Context) {
 	authContext := getAuthContext(c)
-	nodeID, fcerr := extractNodeID(c)
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
+
+	node := &models.Node{}
+	err := c.BindJSON(node)
+	if err != nil {
+		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
-	filename := c.Param(filenameParam)
 
-	_, file := c.GetQuery(fileQueryParam)
-	nodeType := models.NodeTypeFolder
-	if file {
-		nodeType = models.NodeTypeFile
-	}
-
-	createdNode, created, fcerr := r.managers.Node.CreateNode(authContext, nodeType, nodeID, filename)
+	created, createdNode, fcerr := r.managers.Node.CreateNode(authContext, node)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
@@ -89,32 +83,32 @@ func (r *Router) createNodeByID(c *gin.Context) {
 
 func (r *Router) uploadFileByParentID(c *gin.Context) {
 	authContext := getAuthContext(c)
-	parentNodeID, fcerr := extractNodeID(c)
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to get parentNodeID from request")
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		logrus.WithError(err).Error("No file attached to upload")
-		fcerr = fcerror.NewError(fcerror.ErrBadRequest, err)
+		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
-	filename := c.Param(filenameParam)
 
 	tmpPath := utils.JoinPaths(r.cfg.GetFileStorageTempBasePath(), utils.GenerateRandomString(10))
 	err = c.SaveUploadedFile(file, tmpPath)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to save upload to temp file")
-		fcerr = fcerror.NewError(fcerror.ErrCopyFileFailed, err)
+		fcerr := fcerror.NewError(fcerror.ErrCopyFileFailed, err)
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
 
-	createdNode, created, fcerr := r.managers.Node.UploadFile(authContext, parentNodeID, filename, tmpPath)
+	node := &models.Node{}
+	err = c.BindJSON(node)
+	if err != nil {
+		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	created, createdNode, fcerr := r.managers.Node.UploadFile(authContext, node, tmpPath)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return

@@ -1,26 +1,29 @@
 _type: export
 __export_format: 4
-__export_date: 2021-03-21T17:13:32.279Z
+__export_date: 2021-04-05T14:29:01.433Z
 __export_source: insomnia.desktop.app:v2020.5.2
 resources:
   - _id: req_46d8f39ea4bd4913b0814e593994aab7
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1616099450102
+    modified: 1617632884755
     created: 1615734480621
-    url: "{{base_url}}/api/node/create/id/{% response 'body',
-      'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60
-      %}/{% prompt 'Path', '', '', '', false, true %}"
+    url: "{{base_url}}/api/node/create/"
     name: Create Node By Parent ID
     description: ""
     method: POST
-    body: {}
-    parameters:
-      - name: file
-        value: ""
-        description: ""
-        id: pair_0787e522be1f48188a6c33dadf86e071
-        disabled: false
-    headers: []
+    body:
+      mimeType: application/json
+      text: >-
+        {
+        	"parent_node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
+        	"name": "{% prompt 'Path', '', '', '', false, true %}",
+        	"type": "FOLDER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_bebcae5a1b324932862e00409a9abf14
     authentication:
       type: bearer
       token: "{{token}}"

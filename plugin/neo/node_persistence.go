@@ -66,14 +66,15 @@ type nodeReadTransaction struct {
 	*transactionCtx
 }
 
-func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, withShared bool) (node *models.Node, fcerr *fcerror.Error) {
+func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, includedShareMode models.ShareMode) (node *models.Node, fcerr *fcerror.Error) {
 	pathSegments := utils.GetPathSegments(path)
 	relationCount := len(pathSegments) + 1 // Add one for HAS_ROOT_FOLDER
 
-	relLabels := "HAS_FOLDER|CONTAINS"
-	if withShared {
+	relLabels := "HAS_ROOT_FOLDER|CONTAINS"
+	if includedShareMode != models.ShareModeNone {
 		relLabels += "|CONTAINS_SHARED"
 	}
+	// TODO: Read, Read&Write
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:%s*%d]->(n:Node)
@@ -97,11 +98,12 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, 
 	return tx.fillNodeInfo(record, userID, path)
 }
 
-func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID, withShared bool) (node *models.Node, fcerr *fcerror.Error) {
-	relLabels := "HAS_FOLDER|CONTAINS"
-	if withShared {
+func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID, includedShareMode models.ShareMode) (node *models.Node, fcerr *fcerror.Error) {
+	relLabels := "HAS_ROOT_FOLDER|CONTAINS"
+	if includedShareMode != models.ShareModeNone {
 		relLabels += "|CONTAINS_SHARED"
 	}
+	// TODO: Read, Read&Write
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:%s*]->(n:Node {id: $node_id})

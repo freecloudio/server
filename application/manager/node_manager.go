@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"errors"
+
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/persistence"
@@ -14,8 +16,8 @@ type NodeManager interface {
 	CreateUserRootFolder(authCtx *authorization.Context, userID models.UserID) *fcerror.Error
 	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
 	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
-	CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (*models.Node, bool, *fcerror.Error)
-	UploadFile(authCtx *authorization.Context, parentNodeID models.NodeID, name, uploadFilePath string) (*models.Node, bool, *fcerror.Error)
+	CreateNode(authCtx *authorization.Context, node *models.Node) (bool, *models.Node, *fcerror.Error)
+	UploadFile(authCtx *authorization.Context, node *models.Node, uploadFilePath string) (bool, *models.Node, *fcerror.Error)
 	UploadFileByID(authCtx *authorization.Context, nodeID models.NodeID, uploadFilePath string) *fcerror.Error
 	Close()
 }
@@ -70,11 +72,16 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 	return
 }
 
-func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType models.NodeType, parentNodeID models.NodeID, name string) (node *models.Node, created bool, fcerr *fcerror.Error) {
+func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, node *models.Node) (created bool, returnNode *models.Node, fcerr *fcerror.Error) {
 	// TODO: Sanitize Name
 
 	fcerr = authorization.EnforceUser(authCtx)
 	if fcerr != nil {
+		return
+	}
+
+	if node.ParentNodeID == nil {
+		fcerr = fcerror.NewError(fcerror.ErrBadRequest, errors.New("ParentNodeID is missing for node creation"))
 		return
 	}
 
@@ -85,7 +92,7 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType mode
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
-	node, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, nodeType, parentNodeID, name)
+	returnNode, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, node.Type, *node.ParentNodeID, node.Name)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create node")
 		return
@@ -95,16 +102,18 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, nodeType mode
 		return
 	}
 
-	fcerr = mgr.fileStorage.CreateEmptyFileOrFolder(node)
+	fcerr = mgr.fileStorage.CreateEmptyFileOrFolder(returnNode)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("node", node).Error("Failed to create empty file or folder")
+		logrus.WithError(fcerr).WithField("node", returnNode).Error("Failed to create empty file or folder")
 	}
 
 	return
 }
 
-func (mgr *nodeManager) UploadFile(authCtx *authorization.Context, parentNodeID models.NodeID, name, uploadFilePath string) (node *models.Node, created bool, fcerr *fcerror.Error) {
-	node, created, fcerr = mgr.CreateNode(authCtx, models.NodeTypeFile, parentNodeID, name)
+func (mgr *nodeManager) UploadFile(authCtx *authorization.Context, node *models.Node, uploadFilePath string) (created bool, returnNode *models.Node, fcerr *fcerror.Error) {
+	node.Type = models.NodeTypeFile
+
+	created, returnNode, fcerr = mgr.CreateNode(authCtx, node)
 	if fcerr != nil {
 		return
 	}
@@ -145,7 +154,7 @@ func (mgr *nodeManager) GetNodeByPath(authCtx *authorization.Context, path strin
 	}
 	defer trans.Close()
 
-	node, fcerr = trans.GetNodeByPath(authCtx.User.ID, path, true)
+	node, fcerr = trans.GetNodeByPath(authCtx.User.ID, path, models.ShareModeRead)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
 		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "path": path}).Error("Failed to get node for path")
 		return
@@ -167,7 +176,7 @@ func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, nodeID model
 	}
 	defer trans.Close()
 
-	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID, true)
+	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID, models.ShareModeRead)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
 		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
 		return

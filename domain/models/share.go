@@ -3,6 +3,7 @@ package models
 type ShareMode string
 
 const (
+	ShareModeNone      ShareMode = ""
 	ShareModeRead      ShareMode = "READ"
 	ShareModeReadWrite ShareMode = "READ_WRITE"
 )

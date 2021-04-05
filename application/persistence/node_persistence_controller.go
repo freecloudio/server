@@ -12,8 +12,8 @@ type NodePersistenceController interface {
 
 type NodePersistenceReadTransaction interface {
 	ReadTransaction
-	GetNodeByPath(userID models.UserID, path string, withShared bool) (*models.Node, *fcerror.Error)
-	GetNodeByID(userID models.UserID, nodeID models.NodeID, withShared bool) (*models.Node, *fcerror.Error)
+	GetNodeByPath(userID models.UserID, path string, includedShareMode models.ShareMode) (*models.Node, *fcerror.Error)
+	GetNodeByID(userID models.UserID, nodeID models.NodeID, includedShareMode models.ShareMode) (*models.Node, *fcerror.Error)
 }
 
 type NodePersistenceReadWriteTransaction interface {

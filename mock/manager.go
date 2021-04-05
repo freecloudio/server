@@ -253,19 +253,19 @@ func (mr *MockNodeManagerMockRecorder) Close() *gomock.Call {
 }
 
 // CreateNode mocks base method.
-func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 models.NodeType, arg2 models.NodeID, arg3 string) (*models.Node, bool, *fcerror.Error) {
+func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 *models.Node) (bool, *models.Node, *fcerror.Error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNode", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*models.Node)
-	ret1, _ := ret[1].(bool)
+	ret := m.ctrl.Call(m, "CreateNode", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*models.Node)
 	ret2, _ := ret[2].(*fcerror.Error)
 	return ret0, ret1, ret2
 }
 
 // CreateNode indicates an expected call of CreateNode.
-func (mr *MockNodeManagerMockRecorder) CreateNode(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockNodeManagerMockRecorder) CreateNode(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNode", reflect.TypeOf((*MockNodeManager)(nil).CreateNode), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNode", reflect.TypeOf((*MockNodeManager)(nil).CreateNode), arg0, arg1)
 }
 
 // CreateUserRootFolder mocks base method.
@@ -313,19 +313,19 @@ func (mr *MockNodeManagerMockRecorder) GetNodeByPath(arg0, arg1 interface{}) *go
 }
 
 // UploadFile mocks base method.
-func (m *MockNodeManager) UploadFile(arg0 *authorization.Context, arg1 models.NodeID, arg2, arg3 string) (*models.Node, bool, *fcerror.Error) {
+func (m *MockNodeManager) UploadFile(arg0 *authorization.Context, arg1 *models.Node, arg2 string) (bool, *models.Node, *fcerror.Error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadFile", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*models.Node)
-	ret1, _ := ret[1].(bool)
+	ret := m.ctrl.Call(m, "UploadFile", arg0, arg1, arg2)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*models.Node)
 	ret2, _ := ret[2].(*fcerror.Error)
 	return ret0, ret1, ret2
 }
 
 // UploadFile indicates an expected call of UploadFile.
-func (mr *MockNodeManagerMockRecorder) UploadFile(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockNodeManagerMockRecorder) UploadFile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockNodeManager)(nil).UploadFile), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockNodeManager)(nil).UploadFile), arg0, arg1, arg2)
 }
 
 // UploadFileByID mocks base method.
