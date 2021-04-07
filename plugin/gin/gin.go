@@ -52,6 +52,7 @@ func (r *Router) buildRoutes() {
 	r.buildAuthRoutes()
 	r.buildUserRoutes()
 	r.buildNodeRoutes()
+	r.buildShareRoutes()
 
 	r.engine.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Ok")

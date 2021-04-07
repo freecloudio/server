@@ -10,7 +10,7 @@ import (
 )
 
 type ShareManager interface {
-	ShareNodeByID(authCtx *authorization.Context, share *models.Share) (bool, *fcerror.Error)
+	CreateShare(authCtx *authorization.Context, share *models.Share) (bool, *fcerror.Error)
 	Close()
 }
 
@@ -41,7 +41,7 @@ type shareManager struct {
 func (mgr *shareManager) Close() {
 }
 
-func (mgr *shareManager) ShareNodeByID(authCtx *authorization.Context, share *models.Share) (created bool, fcerr *fcerror.Error) {
+func (mgr *shareManager) CreateShare(authCtx *authorization.Context, share *models.Share) (created bool, fcerr *fcerror.Error) {
 	fcerr = authorization.EnforceUser(authCtx)
 	if fcerr != nil {
 		return
@@ -53,12 +53,9 @@ func (mgr *shareManager) ShareNodeByID(authCtx *authorization.Context, share *mo
 		return
 	}
 
-	shareNode, fcerr := nodeTrans.GetNodeByID(authCtx.User.ID, share.NodeID, models.ShareModeRead)
-	if fcerr != nil || fcerr.ID != fcerror.ErrNodeNotFound {
-		logrus.WithError(fcerr).WithField("share", share).Error("Failed to get shareNode")
-		return
-	} else if fcerr != nil {
-		fcerr = fcerror.NewError(fcerror.ErrShareIsInsideShare, fcerr)
+	shareNode, fcerr := nodeTrans.GetNodeByID(authCtx.User.ID, share.NodeID, models.ShareModeNone)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithField("share", share).Error("Failed to get node to share")
 		return
 	}
 
@@ -69,6 +66,7 @@ func (mgr *shareManager) ShareNodeByID(authCtx *authorization.Context, share *mo
 	}
 
 	shareTrans, fcerr := mgr.sharePersistence.StartReadWriteTransaction()
+	defer func() { fcerr = shareTrans.Finish(fcerr) }()
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create transaction")
 		return

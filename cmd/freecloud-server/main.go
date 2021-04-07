@@ -39,6 +39,10 @@ func main() {
 	if fcerr != nil {
 		logrus.WithError(fcerr).Fatal("Failed to initialize neo node persistence plugin - abort")
 	}
+	sharePersistence, fcerr := neo.CreateSharePersistence(cfg)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Fatal("Failed to initialize neo share persistence plugin - abort")
+	}
 
 	localFSFileStorage, fcerr := localfs.CreateLocalFSStorage(cfg)
 	if fcerr != nil {
@@ -49,6 +53,7 @@ func main() {
 	authMgr := manager.NewAuthManager(cfg, authPersistence, managers)
 	userMgr := manager.NewUserManager(cfg, userPersistence, managers)
 	nodeMgr := manager.NewNodeManager(cfg, nodePersistence, localFSFileStorage, managers)
+	shareMgr := manager.NewShareManager(cfg, sharePersistence, nodePersistence, managers)
 
 	router := gin.NewRouter(managers, cfg, ":8080")
 
@@ -73,6 +78,7 @@ func main() {
 	nodeMgr.Close()
 	userMgr.Close()
 	authMgr.Close()
+	shareMgr.Close()
 
 	fcerr = nodePersistence.Close()
 	if fcerr != nil {

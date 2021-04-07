@@ -59,7 +59,7 @@ type shareReadTransaction struct {
 func (tx *shareReadTransaction) NodeContainsNestedShares(nodeID models.NodeID) (containsShared bool, fcerr *fcerror.Error) {
 	res, err := tx.neoTx.Run(`
 		MATCH p = (:Node {id: $node_id})-[:CONTAINS|CONTAINS_SHARED*]->(n:Node)
-		WITH reduce(x = false, t IN relationships(p) | TYPE(t) = "CONTAINS") AS contains_shared
+		WITH reduce(x = false, t IN relationships(p) | TYPE(t) = "CONTAINS_SHARED") AS contains_shared
 		WHERE contains_shared = true
 		RETURN contains_shared
 		`,
@@ -83,8 +83,8 @@ type shareReadWriteTransaction struct {
 func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *models.Share, insertName string) (created bool, fcerr *fcerror.Error) {
 	// TODO: Check that nodeName is not already used in root folder
 	res, err := tx.neoTx.Run(`
-			MATCH (u:User {id: $user_id})-[:HAS_ROOT_FOLDER]->(f:Node:Folder)
-			MERGE (f)-[r:CONTAINS_SHARED {name: $node_name}]->(n:Node {id: $node_id})
+			MATCH (u:User {id: $user_id})-[:HAS_ROOT_FOLDER]->(f:Node:Folder), (n:Node {id: $node_id})
+			MERGE (f)-[r:CONTAINS_SHARED {name: $node_name}]->(n)
 			ON CREATE
 				SET r = $share
 		`,
@@ -100,7 +100,7 @@ func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *mo
 	}
 
 	summary, err := res.Summary()
-	if err == nil && summary.Counters().NodesCreated() > 0 {
+	if err == nil && summary.Counters().RelationshipsCreated() > 0 {
 		created = true
 	}
 

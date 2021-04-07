@@ -12,10 +12,9 @@ import (
 )
 
 const (
-	pathParam      = "path"
-	nodeIDParam    = "node_id"
-	filenameParam  = "filename"
-	fileQueryParam = "file"
+	pathParam     = "path"
+	nodeIDParam   = "node_id"
+	fileNameParam = "filename"
 )
 
 func (r *Router) buildNodeRoutes() {
@@ -24,8 +23,8 @@ func (r *Router) buildNodeRoutes() {
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
 	grp.POST("create/", r.createNodeByID)
-	grp.POST("/upload/id/:"+nodeIDParam, r.uploadFileByID)
-	grp.POST("upload/", r.uploadFileByParentID)
+	grp.POST("upload/id/:"+nodeIDParam, r.uploadFileByID)
+	grp.POST("upload/parent_id/:"+nodeIDParam+"/:"+fileNameParam, r.uploadFileByParentID)
 	// list/id/
 	// content/id/
 }
@@ -100,14 +99,15 @@ func (r *Router) uploadFileByParentID(c *gin.Context) {
 		return
 	}
 
-	node := &models.Node{}
-	err = c.BindJSON(node)
-	if err != nil {
-		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
+	parentNodeID, fcerr := extractNodeID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
+	filename := c.Param(fileNameParam)
 
+	node := &models.Node{ParentNodeID: &parentNodeID, Name: filename}
 	created, createdNode, fcerr := r.managers.Node.UploadFile(authContext, node, tmpPath)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
