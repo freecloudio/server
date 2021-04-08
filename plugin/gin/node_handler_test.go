@@ -184,7 +184,7 @@ func TestCreateNodeByID(t *testing.T) {
 			err = json.NewDecoder(resp.Body).Decode(&resJSON)
 			require.Nil(t, err, "Failed to decode response JSON")
 			if test.success {
-				assert.Equal(t, string(node.ID), resJSON["node_id"], "Returned node id does not match")
+				assert.Equal(t, string(node.ID), resJSON["node"].(map[string]interface{})["id"], "Returned node id does not match")
 				assert.Equal(t, test.inputNew, resJSON["created"], "Returned created flag does not match")
 			}
 		})
