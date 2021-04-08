@@ -1,6 +1,6 @@
 _type: export
 __export_format: 4
-__export_date: 2021-04-05T14:29:01.433Z
+__export_date: 2021-04-07T14:15:34.165Z
 __export_source: insomnia.desktop.app:v2020.5.2
 resources:
   - _id: req_46d8f39ea4bd4913b0814e593994aab7
@@ -140,10 +140,10 @@ resources:
     _type: request
   - _id: req_07e0623b670d4a179a7eaed50aabe801
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1616346637002
+    modified: 1617802121779
     created: 1616346561016
-    url: "{{base_url}}/api/node/upload/id/{% prompt 'Parent Node ID', '', '', '',
-      false, true %}/{% prompt 'Filename', '', '', '', false, true %}"
+    url: "{{base_url}}/api/node/upload/parent_id/{% prompt 'Parent Node ID', '', '',
+      '', false, true %}/{% prompt 'Filename', '', '', '', false, true %}"
     name: Upload By Parent Node ID
     description: ""
     method: POST
@@ -174,6 +174,49 @@ resources:
     settingRebuildPath: true
     settingFollowRedirects: global
     _type: request
+  - _id: req_06d70eeafee94934b101e00961960d4b
+    parentId: fld_2c89ec92c0a54a8daf576e22288a7350
+    modified: 1617804654705
+    created: 1617802343387
+    url: "{{base_url}}/api/share/"
+    name: Create Share
+    description: ""
+    method: POST
+    body:
+      mimeType: application/json
+      text: >-
+        {
+        	"node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
+        	"shared_with_id": "{% prompt 'UserID', '', '', '', false, true %}",
+        	"mode": "{{ _.shareModeReadWrite }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_e6e75a02c2cb410c8ca061414e207d5d
+    authentication:
+      type: bearer
+      token: "{{ _.token }}"
+    metaSortKey: -1617802343387
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: fld_2c89ec92c0a54a8daf576e22288a7350
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1617802324668
+    created: 1617802321111
+    name: Share
+    description: ""
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1614974977335.5
+    _type: request_group
   - _id: req_408d1d59221044c1a6b61db7d388ee77
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
     modified: 1616093097909
@@ -239,7 +282,7 @@ resources:
     _type: request
   - _id: req_d1062ec6f1bb4f079db01aedc5cdb6a8
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1616099328848
+    modified: 1617802613171
     created: 1614193498889
     url: "{{base_url}}/api/user"
     name: Register New User
@@ -251,7 +294,7 @@ resources:
         {
         	"first_name": "Tom",
         	"last_name": "Tester",
-        	"email": "tom.tester@example.com",
+        	"email": "tom.tester1@example.com",
         	"password": "123456"
         }
     parameters: []
@@ -327,15 +370,21 @@ resources:
     _type: request
   - _id: env_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
     parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
-    modified: 1616014449274
+    modified: 1617802513273
     created: 1592679770868
     name: Base Environment
     data:
       token: "{% response 'body', 'req_408d1d59221044c1a6b61db7d388ee77',
         'b64::JC50b2tlbg==::46b', 'never', 60 %}"
+      shareModeNone: ""
+      shareModeRead: READ
+      shareModeReadWrite: READ_WRITE
     dataPropertyOrder:
       "&":
         - token
+        - shareModeNone
+        - shareModeRead
+        - shareModeReadWrite
     color: null
     isPrivate: false
     metaSortKey: 1592679770868
