@@ -72,6 +72,8 @@ func (mgr *shareManager) CreateShare(authCtx *authorization.Context, share *mode
 		return
 	}
 
+	// TODO: Check that nodeName is not already used in root folder and name is not empty (root folder)
+
 	containsShares, fcerr := shareTrans.NodeContainsNestedShares(share.NodeID)
 	if fcerr != nil {
 		logrus.WithError(fcerr).WithField("share", share).Error("Failed to get whether node contains nested shares")

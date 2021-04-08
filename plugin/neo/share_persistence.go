@@ -81,12 +81,11 @@ type shareReadWriteTransaction struct {
 }
 
 func (tx *shareReadWriteTransaction) CreateShare(userID models.UserID, share *models.Share, insertName string) (created bool, fcerr *fcerror.Error) {
-	// TODO: Check that nodeName is not already used in root folder
 	res, err := tx.neoTx.Run(`
 			MATCH (u:User {id: $user_id})-[:HAS_ROOT_FOLDER]->(f:Node:Folder), (n:Node {id: $node_id})
 			MERGE (f)-[r:CONTAINS_SHARED {name: $node_name}]->(n)
 			ON CREATE
-				SET r = $share
+				SET r += $share
 		`,
 		map[string]interface{}{
 			"user_id":   share.SharedWithID,

@@ -1,11 +1,11 @@
 _type: export
 __export_format: 4
-__export_date: 2021-04-07T14:15:34.165Z
-__export_source: insomnia.desktop.app:v2020.5.2
+__export_date: 2021-04-08T17:00:13.951Z
+__export_source: insomnia.desktop.app:v2021.2.1
 resources:
   - _id: req_46d8f39ea4bd4913b0814e593994aab7
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1617632884755
+    modified: 1617899665114
     created: 1615734480621
     url: "{{base_url}}/api/node/create/"
     name: Create Node By Parent ID
@@ -17,7 +17,7 @@ resources:
         {
         	"parent_node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
         	"name": "{% prompt 'Path', '', '', '', false, true %}",
-        	"type": "FOLDER"
+        	"type": "{{ _.nodeTypeFolder }}"
         }
     parameters: []
     headers:
@@ -52,7 +52,7 @@ resources:
     created: 1592679770768
     name: freecloud
     description: ""
-    scope: null
+    scope: collection
     _type: workspace
   - _id: req_c230359045644530b1cda4f08e8c4066
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
@@ -176,7 +176,7 @@ resources:
     _type: request
   - _id: req_06d70eeafee94934b101e00961960d4b
     parentId: fld_2c89ec92c0a54a8daf576e22288a7350
-    modified: 1617804654705
+    modified: 1617900257783
     created: 1617802343387
     url: "{{base_url}}/api/share/"
     name: Create Share
@@ -188,7 +188,7 @@ resources:
         {
         	"node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
         	"shared_with_id": "{% prompt 'UserID', '', '', '', false, true %}",
-        	"mode": "{{ _.shareModeReadWrite }}"
+        	"share_mode": "{{ _.shareModeReadWrite }}"
         }
     parameters: []
     headers:
@@ -219,7 +219,7 @@ resources:
     _type: request_group
   - _id: req_408d1d59221044c1a6b61db7d388ee77
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1616093097909
+    modified: 1617901109798
     created: 1614273555845
     url: "{{base_url}}/api/auth/login"
     name: Login
@@ -229,7 +229,7 @@ resources:
       mimeType: application/json
       text: |-
         {
-        	"email": "tom.tester@example.com",
+        	"email": "{{ _.userMail2 }}",
         	"password": "123456"
         }
     parameters: []
@@ -282,7 +282,7 @@ resources:
     _type: request
   - _id: req_d1062ec6f1bb4f079db01aedc5cdb6a8
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1617802613171
+    modified: 1617899703221
     created: 1614193498889
     url: "{{base_url}}/api/user"
     name: Register New User
@@ -294,7 +294,7 @@ resources:
         {
         	"first_name": "Tom",
         	"last_name": "Tester",
-        	"email": "tom.tester1@example.com",
+        	"email": "{{ _.userMail2 }}",
         	"password": "123456"
         }
     parameters: []
@@ -370,7 +370,7 @@ resources:
     _type: request
   - _id: env_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
     parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
-    modified: 1617802513273
+    modified: 1617899657289
     created: 1592679770868
     name: Base Environment
     data:
@@ -379,12 +379,20 @@ resources:
       shareModeNone: ""
       shareModeRead: READ
       shareModeReadWrite: READ_WRITE
+      userMail1: test.tester@example.com
+      userMail2: test.tester2@example.com
+      nodeTypeFolder: FOLDER
+      nodeTypeFile: FILE
     dataPropertyOrder:
       "&":
         - token
         - shareModeNone
         - shareModeRead
         - shareModeReadWrite
+        - userMail1
+        - userMail2
+        - nodeTypeFolder
+        - nodeTypeFile
     color: null
     isPrivate: false
     metaSortKey: 1592679770868

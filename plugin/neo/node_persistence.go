@@ -260,8 +260,8 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 			MERGE (f)-[r:CONTAINS {name: $r.name}]->(n:Node)
 			ON CREATE
 				SET n:%s
-				SET n = $n
-				SET r = $r
+				SET n += $n
+				SET r += $r
 			WITH n, r, p
 			RETURN n,
 				"Folder" IN labels(n) AS is_folder,
