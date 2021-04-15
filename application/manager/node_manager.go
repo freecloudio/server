@@ -16,6 +16,7 @@ type NodeManager interface {
 	CreateUserRootFolder(authCtx *authorization.Context, userID models.UserID) *fcerror.Error
 	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
 	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
+	ListByID(authCtx *authorization.Context, nodeID models.NodeID) ([]*models.Node, *fcerror.Error)
 	CreateNode(authCtx *authorization.Context, node *models.Node) (bool, *models.Node, *fcerror.Error)
 	UploadFile(authCtx *authorization.Context, node *models.Node, uploadFilePath string) (bool, *models.Node, *fcerror.Error)
 	UploadFileByID(authCtx *authorization.Context, nodeID models.NodeID, uploadFilePath string) *fcerror.Error
@@ -179,6 +180,28 @@ func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, nodeID model
 	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID, models.ShareModeRead)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
 		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
+		return
+	}
+
+	return
+}
+
+func (mgr *nodeManager) ListByID(authCtx *authorization.Context, nodeID models.NodeID) (node []*models.Node, fcerr *fcerror.Error) {
+	fcerr = authorization.EnforceUser(authCtx)
+	if fcerr != nil {
+		return
+	}
+
+	trans, fcerr := mgr.nodePersistence.StartReadTransaction()
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to create transaction")
+		return
+	}
+	defer trans.Close()
+
+	node, fcerr = trans.ListByID(authCtx.User.ID, nodeID, models.ShareModeRead)
+	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
+		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get content for nodeID")
 		return
 	}
 

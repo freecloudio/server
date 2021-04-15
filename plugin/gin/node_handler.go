@@ -22,10 +22,10 @@ func (r *Router) buildNodeRoutes() {
 
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
+	grp.GET("list/id/:"+nodeIDParam, r.getNodeListByID)
 	grp.POST("create/", r.createNodeByID)
 	grp.POST("upload/id/:"+nodeIDParam, r.uploadFileByID)
 	grp.POST("upload/parent_id/:"+nodeIDParam+"/:"+fileNameParam, r.uploadFileByParentID)
-	// list/id/
 	// content/id/
 }
 
@@ -58,6 +58,24 @@ func (r *Router) getNodeInfoByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, node)
+}
+
+func (r *Router) getNodeListByID(c *gin.Context) {
+	authContext := getAuthContext(c)
+	nodeID, fcerr := extractNodeID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	list, fcerr := r.managers.Node.ListByID(authContext, nodeID)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	c.JSON(http.StatusOK, list)
 }
 
 func (r *Router) createNodeByID(c *gin.Context) {

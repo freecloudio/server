@@ -15,8 +15,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TODO: Deduplicate Cypher statements
+
 type containsRelation struct {
 	Name string `json:"name"`
+}
+
+func getContainsRelationshipLabels(includedShareMode models.ShareMode) string {
+	// TODO: Read, Read&Write
+	relLabels := "HAS_ROOT_FOLDER|CONTAINS"
+	if includedShareMode != models.ShareModeNone {
+		relLabels += "|CONTAINS_SHARED"
+	}
+	return relLabels
 }
 
 func init() {
@@ -69,12 +80,7 @@ type nodeReadTransaction struct {
 func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, includedShareMode models.ShareMode) (node *models.Node, fcerr *fcerror.Error) {
 	pathSegments := utils.GetPathSegments(path)
 	relationCount := len(pathSegments) + 1 // Add one for HAS_ROOT_FOLDER
-
-	relLabels := "HAS_ROOT_FOLDER|CONTAINS"
-	if includedShareMode != models.ShareModeNone {
-		relLabels += "|CONTAINS_SHARED"
-	}
-	// TODO: Read, Read&Write
+	relLabels := getContainsRelationshipLabels(includedShareMode)
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:%s*%d]->(n:Node)
@@ -99,11 +105,7 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, 
 }
 
 func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID, includedShareMode models.ShareMode) (node *models.Node, fcerr *fcerror.Error) {
-	relLabels := "HAS_ROOT_FOLDER|CONTAINS"
-	if includedShareMode != models.ShareModeNone {
-		relLabels += "|CONTAINS_SHARED"
-	}
-	// TODO: Read, Read&Write
+	relLabels := getContainsRelationshipLabels(includedShareMode)
 
 	record, err := neo4j.Single(tx.neoTx.Run(fmt.Sprintf(`
 			MATCH p = (u:User {id: $user_id})-[:%s*]->(n:Node {id: $node_id})
@@ -133,6 +135,50 @@ func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.N
 	path := pathInt.(string)
 
 	return tx.fillNodeInfo(record, userID, path)
+}
+
+func (tx *nodeReadTransaction) ListByID(userID models.UserID, nodeID models.NodeID, includedShareMode models.ShareMode) (list []*models.Node, fcerr *fcerror.Error) {
+	relLabels := getContainsRelationshipLabels(includedShareMode)
+
+	res, err := tx.neoTx.Run(fmt.Sprintf(`
+			MATCH p = (u:User {id: $user_id})-[:%s*]->(:Node:Folder {id: $node_id})-[:%s]->(n:Node)
+			WITH n, p, nodes(p)[-2] as second_last_node, relationships(p)[-1] as last_relationship
+			RETURN n, "Folder" IN labels(n) AS is_folder,
+				reduce(s = "", n in tail(relationships(p)) | s + '/' + n.name) as path,
+				last_relationship.name as name,
+				CASE
+					WHEN 'Folder' IN labels(second_last_node) THEN second_last_node.id
+					ELSE NULL
+				END AS parent_node_id
+		`, relLabels, relLabels),
+		map[string]interface{}{
+			"user_id": userID,
+			"node_id": nodeID,
+		})
+	if err != nil {
+		fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
+		return
+	}
+
+	for res.Next() {
+		record := res.Record()
+
+		pathInt, ok := record.Get("path")
+		if !ok {
+			fcerr = fcerror.NewError(fcerror.ErrModelConversionFailed, errors.New("path not found in record"))
+			return
+		}
+		path := pathInt.(string)
+
+		node, fcerr := tx.fillNodeInfo(record, userID, path)
+		if fcerr != nil {
+			fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
+			return nil, fcerr
+		}
+
+		list = append(list, node)
+	}
+	return
 }
 
 func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
