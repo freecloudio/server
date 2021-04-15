@@ -5,6 +5,7 @@
 package mock
 
 import (
+	io "io"
 	reflect "reflect"
 
 	authorization "github.com/freecloudio/server/application/authorization"
@@ -282,6 +283,22 @@ func (mr *MockNodeManagerMockRecorder) CreateUserRootFolder(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserRootFolder", reflect.TypeOf((*MockNodeManager)(nil).CreateUserRootFolder), arg0, arg1)
 }
 
+// DownloadFile mocks base method.
+func (m *MockNodeManager) DownloadFile(arg0 *authorization.Context, arg1 models.NodeID) (*models.Node, io.ReadCloser, *fcerror.Error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DownloadFile", arg0, arg1)
+	ret0, _ := ret[0].(*models.Node)
+	ret1, _ := ret[1].(io.ReadCloser)
+	ret2, _ := ret[2].(*fcerror.Error)
+	return ret0, ret1, ret2
+}
+
+// DownloadFile indicates an expected call of DownloadFile.
+func (mr *MockNodeManagerMockRecorder) DownloadFile(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockNodeManager)(nil).DownloadFile), arg0, arg1)
+}
+
 // GetNodeByID mocks base method.
 func (m *MockNodeManager) GetNodeByID(arg0 *authorization.Context, arg1 models.NodeID) (*models.Node, *fcerror.Error) {
 	m.ctrl.T.Helper()
@@ -310,6 +327,21 @@ func (m *MockNodeManager) GetNodeByPath(arg0 *authorization.Context, arg1 string
 func (mr *MockNodeManagerMockRecorder) GetNodeByPath(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeByPath", reflect.TypeOf((*MockNodeManager)(nil).GetNodeByPath), arg0, arg1)
+}
+
+// ListByID mocks base method.
+func (m *MockNodeManager) ListByID(arg0 *authorization.Context, arg1 models.NodeID) ([]*models.Node, *fcerror.Error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByID", arg0, arg1)
+	ret0, _ := ret[0].([]*models.Node)
+	ret1, _ := ret[1].(*fcerror.Error)
+	return ret0, ret1
+}
+
+// ListByID indicates an expected call of ListByID.
+func (mr *MockNodeManagerMockRecorder) ListByID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByID", reflect.TypeOf((*MockNodeManager)(nil).ListByID), arg0, arg1)
 }
 
 // UploadFile mocks base method.

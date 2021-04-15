@@ -1,11 +1,11 @@
 package localfs
 
 import (
-	"fmt"
 	"io"
 	"os"
 
 	"github.com/freecloudio/server/application/config"
+	"github.com/freecloudio/server/application/storage"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
@@ -14,6 +14,8 @@ import (
 type LocalFSStorage struct {
 	basepath string
 }
+
+var _ storage.FileStorageController = &LocalFSStorage{}
 
 const osPermission os.FileMode = 0770
 
@@ -33,7 +35,7 @@ func (*LocalFSStorage) Close() *fcerror.Error {
 }
 
 func (fs *LocalFSStorage) getUserFolder(userID models.UserID) string {
-	return utils.JoinPaths(fs.basepath, fmt.Sprintf("%s", userID))
+	return utils.JoinPaths(fs.basepath, string(userID))
 }
 
 func (fs *LocalFSStorage) getUserNodePath(node *models.Node) string {
@@ -51,7 +53,7 @@ func (fs *LocalFSStorage) CreateUserRootFolder(userID models.UserID) (fcerr *fce
 
 func (fs *LocalFSStorage) CreateEmptyFileOrFolder(node *models.Node) (fcerr *fcerror.Error) {
 	if node.OwnerID != node.PerspectiveUserID {
-		return fcerror.NewError(fcerror.ErrFileFolderCreationFailed, nil)
+		return fcerror.NewError(fcerror.ErrStorageOperationWithWrongUserPerspective, nil)
 	}
 
 	path := fs.getUserNodePath(node)
@@ -74,7 +76,7 @@ func (fs *LocalFSStorage) CreateEmptyFileOrFolder(node *models.Node) (fcerr *fce
 
 func (fs *LocalFSStorage) CopyFileFromUpload(node *models.Node, uploadPath string) (fcerr *fcerror.Error) {
 	if node.OwnerID != node.PerspectiveUserID {
-		return fcerror.NewError(fcerror.ErrFileFolderCreationFailed, nil)
+		return fcerror.NewError(fcerror.ErrStorageOperationWithWrongUserPerspective, nil)
 	}
 
 	path := fs.getUserNodePath(node)
@@ -96,5 +98,28 @@ func (fs *LocalFSStorage) CopyFileFromUpload(node *models.Node, uploadPath strin
 		return fcerror.NewError(fcerror.ErrBadRequest, err)
 	}
 
+	return
+}
+
+func (fs *LocalFSStorage) DownloadFile(node *models.Node) (reader io.ReadCloser, size int64, fcerr *fcerror.Error) {
+	if node.OwnerID != node.PerspectiveUserID {
+		fcerr = fcerror.NewError(fcerror.ErrStorageOperationWithWrongUserPerspective, nil)
+		return
+	}
+
+	path := fs.getUserNodePath(node)
+	file, err := os.Open(path)
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrOpenUserFile, err)
+		return
+	}
+
+	fileStat, err := file.Stat()
+	if err != nil {
+		fcerr = fcerror.NewError(fcerror.ErrOpenUserFile, err)
+		return
+	}
+	size = fileStat.Size()
+	reader = file
 	return
 }

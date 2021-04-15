@@ -2,6 +2,7 @@ package manager
 
 import (
 	"errors"
+	"io"
 
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
@@ -20,6 +21,7 @@ type NodeManager interface {
 	CreateNode(authCtx *authorization.Context, node *models.Node) (bool, *models.Node, *fcerror.Error)
 	UploadFile(authCtx *authorization.Context, node *models.Node, uploadFilePath string) (bool, *models.Node, *fcerror.Error)
 	UploadFileByID(authCtx *authorization.Context, nodeID models.NodeID, uploadFilePath string) *fcerror.Error
+	DownloadFile(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, io.ReadCloser, int64, *fcerror.Error)
 	Close()
 }
 
@@ -205,5 +207,31 @@ func (mgr *nodeManager) ListByID(authCtx *authorization.Context, nodeID models.N
 		return
 	}
 
+	return
+}
+
+func (mgr *nodeManager) DownloadFile(authCtx *authorization.Context, nodeID models.NodeID) (node *models.Node, reader io.ReadCloser, size int64, fcerr *fcerror.Error) {
+	fcerr = authorization.EnforceUser(authCtx)
+	if fcerr != nil {
+		return
+	}
+
+	node, fcerr = mgr.GetNodeByID(authCtx, nodeID)
+	if fcerr != nil {
+		return
+	}
+
+	// TODO: Support folder download
+	if node.Type == models.NodeTypeFolder {
+		fcerr = fcerror.NewError(fcerror.ErrUnknown, errors.New("Downloading folder not yet supported"))
+		return
+	}
+
+	// TODO: Use node size here after it is filled? => Direct FS changes will break download
+	reader, size, fcerr = mgr.fileStorage.DownloadFile(node)
+	if fcerr != nil {
+		logrus.WithError(fcerr).WithField("node", node).Error("Failed to download file")
+		return
+	}
 	return
 }

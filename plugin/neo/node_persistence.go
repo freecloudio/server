@@ -228,7 +228,7 @@ func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.U
 		return
 	}
 
-	// TODO: Insert ShareMode, Starred
+	// TODO: Insert Starred
 	return
 }
 

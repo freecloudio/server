@@ -23,10 +23,10 @@ func (r *Router) buildNodeRoutes() {
 	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
 	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
 	grp.GET("list/id/:"+nodeIDParam, r.getNodeListByID)
+	grp.GET("content/id/:"+nodeIDParam, r.getNodeContentByID)
 	grp.POST("create/", r.createNodeByID)
 	grp.POST("upload/id/:"+nodeIDParam, r.uploadFileByID)
 	grp.POST("upload/parent_id/:"+nodeIDParam+"/:"+fileNameParam, r.uploadFileByParentID)
-	// content/id/
 }
 
 func (r *Router) getNodeInfoByPath(c *gin.Context) {
@@ -76,6 +76,25 @@ func (r *Router) getNodeListByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, list)
+}
+
+func (r *Router) getNodeContentByID(c *gin.Context) {
+	authContext := getAuthContext(c)
+	nodeID, fcerr := extractNodeID(c)
+	if fcerr != nil {
+		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+
+	node, reader, size, fcerr := r.managers.Node.DownloadFile(authContext, nodeID)
+	if fcerr != nil {
+		c.JSON(errToStatus(fcerr), fcerr)
+		return
+	}
+	defer reader.Close()
+
+	c.DataFromReader(http.StatusOK, size, string(node.MimeType), reader, nil)
 }
 
 func (r *Router) createNodeByID(c *gin.Context) {
@@ -173,7 +192,7 @@ func (r *Router) uploadFileByID(c *gin.Context) {
 func extractNodeID(c *gin.Context) (nodeID models.NodeID, fcerr *fcerror.Error) {
 	nodeIDStr := c.Param(nodeIDParam)
 	if nodeIDStr == "" {
-		fcerr = fcerror.NewError(fcerror.ErrBadRequest, errors.New("NodeID not found in path param"))
+		fcerr = fcerror.NewErrorSkipFunc(fcerror.ErrBadRequest, errors.New("NodeID not found in path param"))
 		return
 	}
 

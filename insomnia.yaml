@@ -1,11 +1,11 @@
 _type: export
 __export_format: 4
-__export_date: 2021-04-08T17:00:13.951Z
+__export_date: 2021-04-15T19:14:04.369Z
 __export_source: insomnia.desktop.app:v2021.2.1
 resources:
   - _id: req_46d8f39ea4bd4913b0814e593994aab7
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1617899665114
+    modified: 1618510865563
     created: 1615734480621
     url: "{{base_url}}/api/node/create/"
     name: Create Node By Parent ID
@@ -17,7 +17,7 @@ resources:
         {
         	"parent_node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
         	"name": "{% prompt 'Path', '', '', '', false, true %}",
-        	"type": "{{ _.nodeTypeFolder }}"
+        	"type": "{{ _.nodeTypeFile }}"
         }
     parameters: []
     headers:
@@ -94,6 +94,54 @@ resources:
       type: bearer
       token: "{{token}}"
     metaSortKey: -1592679813188.25
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_a6ad1991da4249a181cf7626e937f537
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1618510743859
+    created: 1618510741357
+    url: "{{base_url}}/api/node/list/id/{% prompt 'Node ID', '', '', '', false, true
+      %}"
+    name: Get Node List By ID
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813185.125
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_28739baeb911490dbf75d7b5ea2d7bf1
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1618513595450
+    created: 1618513591638
+    url: "{{base_url}}/api/node/content/id/{% prompt 'Node ID', '', '', '', false,
+      true %}"
+    name: Get Node Content By ID
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813183.5625
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -219,7 +267,7 @@ resources:
     _type: request_group
   - _id: req_408d1d59221044c1a6b61db7d388ee77
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1617901109798
+    modified: 1618510793518
     created: 1614273555845
     url: "{{base_url}}/api/auth/login"
     name: Login

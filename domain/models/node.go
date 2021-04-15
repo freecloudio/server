@@ -21,14 +21,13 @@ type Node struct {
 	Size     int64        `json:"size"`
 	MimeType NodeMimeType `json:"mime_type" fc_neo:",optional"`
 
-	Name         string    `json:"name" fc_neo:"-"`
-	OwnerID      UserID    `json:"owner_id" fc_neo:"-"`
-	ParentNodeID *NodeID   `json:"parent_node_id" fc_neo:"-"`
-	Type         NodeType  `json:"type" fc_neo:"-"`
-	ShareMode    ShareMode `json:"share_mode" fc_neo:"-"`
-	IsStarred    bool      `json:"is_starred" fc_neo:"-"`
-	Path         string    `json:"path" fc_neo:"-"`
-	FullPath     string    `json:"full_path" fc_neo:"-"`
+	Name         string   `json:"name" fc_neo:"-"`
+	OwnerID      UserID   `json:"owner_id" fc_neo:"-"`
+	ParentNodeID *NodeID  `json:"parent_node_id" fc_neo:"-"`
+	Type         NodeType `json:"type" fc_neo:"-"`
+	IsStarred    bool     `json:"is_starred" fc_neo:"-"`
+	Path         string   `json:"path" fc_neo:"-"`
+	FullPath     string   `json:"full_path" fc_neo:"-"`
 
 	PerspectiveUserID UserID `json:"-"`
 }
