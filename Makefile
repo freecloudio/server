@@ -9,9 +9,10 @@ run: build
 gocal:
 	gocal
 
-test: generatemock
+test: generate
 	go test ./... --cover
 
-generatemock:
+generate:
 	go install github.com/golang/mock/mockgen@v1.5.0
+	go get github.com/99designs/gqlgen
 	go generate ./...

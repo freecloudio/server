@@ -284,13 +284,14 @@ func (mr *MockNodeManagerMockRecorder) CreateUserRootFolder(arg0, arg1 interface
 }
 
 // DownloadFile mocks base method.
-func (m *MockNodeManager) DownloadFile(arg0 *authorization.Context, arg1 models.NodeID) (*models.Node, io.ReadCloser, *fcerror.Error) {
+func (m *MockNodeManager) DownloadFile(arg0 *authorization.Context, arg1 models.NodeID) (*models.Node, io.ReadCloser, int64, *fcerror.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DownloadFile", arg0, arg1)
 	ret0, _ := ret[0].(*models.Node)
 	ret1, _ := ret[1].(io.ReadCloser)
-	ret2, _ := ret[2].(*fcerror.Error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(int64)
+	ret3, _ := ret[3].(*fcerror.Error)
+	return ret0, ret1, ret2, ret3
 }
 
 // DownloadFile indicates an expected call of DownloadFile.

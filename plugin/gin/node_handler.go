@@ -144,7 +144,7 @@ func (r *Router) uploadFileByParentID(c *gin.Context) {
 	}
 	filename := c.Param(fileNameParam)
 
-	node := &models.Node{ParentNodeID: &parentNodeID, Name: filename}
+	node := &models.Node{ParentNodeID: &parentNodeID, Name: filename, Size: file.Size}
 	created, createdNode, fcerr := r.managers.Node.UploadFile(authContext, node, tmpPath)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
