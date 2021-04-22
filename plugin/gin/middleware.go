@@ -1,9 +1,12 @@
 package gin
 
 import (
+	"context"
+
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/plugin/graphql/resolver"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -50,6 +53,14 @@ func getAuthMiddleware(authMgr manager.AuthManager) gin.HandlerFunc {
 		}
 
 		c.Set(authContextKey, authContext)
+		c.Next()
+	}
+}
+
+func getInjectGinContextMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := context.WithValue(c.Request.Context(), resolver.GinContextKey, c)
+		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
 }

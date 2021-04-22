@@ -14,7 +14,7 @@ type User {
 }
 
 type Query {
-  users: [User!]!
+  user(user_id: ID): User!
 }
 
 #input NewTodo {
