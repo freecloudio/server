@@ -159,18 +159,18 @@ func (mr *MockUserManagerMockRecorder) CountUsers(arg0 interface{}) *gomock.Call
 }
 
 // CreateUser mocks base method.
-func (m *MockUserManager) CreateUser(arg0 *authorization.Context, arg1 *models.User) (*models.Session, *fcerror.Error) {
+func (m *MockUserManager) CreateUser(arg0 *models.User) (*models.Session, *fcerror.Error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUser", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateUser", arg0)
 	ret0, _ := ret[0].(*models.Session)
 	ret1, _ := ret[1].(*fcerror.Error)
 	return ret0, ret1
 }
 
 // CreateUser indicates an expected call of CreateUser.
-func (mr *MockUserManagerMockRecorder) CreateUser(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockUserManagerMockRecorder) CreateUser(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserManager)(nil).CreateUser), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserManager)(nil).CreateUser), arg0)
 }
 
 // GetUserByEmail mocks base method.

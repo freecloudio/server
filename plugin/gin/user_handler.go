@@ -22,8 +22,6 @@ func (r *Router) buildUserRoutes() {
 }
 
 func (r *Router) registerUser(c *gin.Context) {
-	authContext := getAuthContext(c)
-
 	user := &models.User{}
 	err := c.BindJSON(user)
 	if err != nil {
@@ -33,7 +31,7 @@ func (r *Router) registerUser(c *gin.Context) {
 		return
 	}
 
-	session, fcerr := r.managers.User.CreateUser(authContext, user)
+	session, fcerr := r.managers.User.CreateUser(user)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return

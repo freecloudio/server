@@ -12,7 +12,7 @@ import (
 )
 
 type UserManager interface {
-	CreateUser(authCtx *authorization.Context, user *models.User) (*models.Session, *fcerror.Error)
+	CreateUser(user *models.User) (*models.Session, *fcerror.Error)
 	GetUserByID(authCtx *authorization.Context, userID models.UserID) (*models.User, *fcerror.Error)
 	GetUserByEmail(authCtx *authorization.Context, email string) (*models.User, *fcerror.Error)
 	UpdateUser(authCtx *authorization.Context, userID models.UserID, updateUser *models.UserUpdate) (*models.User, *fcerror.Error)
@@ -37,10 +37,12 @@ type userManager struct {
 	managers        *Managers
 }
 
+var _ UserManager = &userManager{}
+
 func (mgr *userManager) Close() {
 }
 
-func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.User) (session *models.Session, fcerr *fcerror.Error) {
+func (mgr *userManager) CreateUser(user *models.User) (session *models.Session, fcerr *fcerror.Error) {
 	// TODO: Input Validation
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
@@ -103,6 +105,7 @@ func (mgr *userManager) CreateUser(authCtx *authorization.Context, user *models.
 		fcerr = nil
 	}
 
+	// TODO: Remove once REST API is gone
 	return mgr.managers.Auth.CreateNewSession(user.ID)
 }
 
