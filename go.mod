@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang/mock v1.5.0
 	github.com/google/uuid v1.2.0
+	github.com/mheidinger/gocal v0.0.0-20200511163313-720d3d3cf8f8 // indirect
 	github.com/neo4j/neo4j-go-driver v1.8.3
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0

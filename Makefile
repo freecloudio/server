@@ -7,6 +7,7 @@ run: build
 	./freecloud-server
 
 gocal:
+	go install github.com/mheidinger/gocal
 	gocal
 
 test: generate
