@@ -1,5 +1,3 @@
-scalar Time
-
 type User {
   id: ID!
   created: Time!
@@ -13,7 +11,7 @@ type User {
   is_admin: Boolean!
 }
 
-type Query {
+extend type Query {
   user(user_id: ID): User!
 }
 
@@ -24,6 +22,6 @@ input UserInput {
   password: String!
 }
 
-type Mutation {
+extend type Mutation {
   registerUser(input: UserInput!): User!
 }

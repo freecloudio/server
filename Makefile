@@ -13,6 +13,6 @@ test: generate
 	go test ./... --cover
 
 generate:
-	go install github.com/golang/mock/mockgen@v1.5.0
+	go install github.com/golang/mock/mockgen
 	go get github.com/99designs/gqlgen
 	go generate ./...

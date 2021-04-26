@@ -28,11 +28,14 @@ func NewResolver(cfg config.Config, managers *manager.Managers) *Resolver {
 	return &Resolver{cfg, managers}
 }
 
+// TODO: Extract all keys into gin/keys package
 const (
 	GinContextKey  = "gin_context"
 	AuthContextKey = "authentication_context"
+	AuthTokenKey   = "authentication_token"
 )
 
+// TODO: Remove gin context, use normal one
 func extractGinContext(ctx context.Context) (ginCtx *gin.Context, fcerr *fcerror.Error) {
 	ginCtxInt := ctx.Value(GinContextKey)
 	if ginCtxInt == nil {

@@ -2,6 +2,15 @@
 
 package model
 
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type MutationResult struct {
+	Success bool `json:"success"`
+}
+
 type UserInput struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`

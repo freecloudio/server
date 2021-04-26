@@ -38,9 +38,9 @@ func TestRegisterUserEndpoint(t *testing.T) {
 
 			mockUserMgr := mock.NewMockUserManager(mockCtrl)
 			if test.success && test.willCallRegister {
-				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(&models.Session{}, nil).Times(1)
+				mockUserMgr.EXPECT().CreateUser(gomock.Any()).Return(&models.Session{}, nil).Times(1)
 			} else if test.willCallRegister {
-				mockUserMgr.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
+				mockUserMgr.EXPECT().CreateUser(gomock.Any()).Return(nil, fcerror.NewError(fcerror.ErrUnknown, nil)).Times(1)
 			}
 
 			managers := &manager.Managers{User: mockUserMgr}

@@ -1,8 +1,43 @@
 _type: export
 __export_format: 4
-__export_date: 2021-04-22T18:35:04.017Z
-__export_source: insomnia.desktop.app:v2021.2.1
+__export_date: 2021-04-23T06:49:41.591Z
+__export_source: insomnia.desktop.app:v2021.2.2
 resources:
+  - _id: req_b8c4dd07416643549ddd88539306830a
+    parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
+    modified: 1619160034503
+    created: 1619159928619
+    url: "{{ _.base_url }}/graphql"
+    name: Health
+    description: ""
+    method: POST
+    body:
+      mimeType: application/graphql
+      text: '{"query":"query getHealth {\n  health
+        {\n    success\n  }\n}","operationName":"getHealth"}'
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_cfdd8e511a3541cd9af27aa6eb781d0c
+    authentication: {}
+    metaSortKey: -1619159928619
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: wrk_085358b34fdd4e32b74557ce56fdda2a
+    parentId: null
+    modified: 1592679770768
+    created: 1592679770768
+    name: freecloud
+    description: ""
+    scope: collection
+    _type: workspace
   - _id: req_46d8f39ea4bd4913b0814e593994aab7
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
     modified: 1618510865563
@@ -46,14 +81,6 @@ resources:
     environmentPropertyOrder: null
     metaSortKey: -1615676401468
     _type: request_group
-  - _id: wrk_085358b34fdd4e32b74557ce56fdda2a
-    parentId: null
-    modified: 1592679770768
-    created: 1592679770768
-    name: freecloud
-    description: ""
-    scope: collection
-    _type: workspace
   - _id: req_c230359045644530b1cda4f08e8c4066
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
     modified: 1615735768323
@@ -265,28 +292,27 @@ resources:
     environmentPropertyOrder: null
     metaSortKey: -1614974977335.5
     _type: request_group
-  - _id: req_408d1d59221044c1a6b61db7d388ee77
+  - _id: req_973a176e22564a8aae802142f020d94f
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1619116493734
-    created: 1614273555845
-    url: "{{base_url}}/api/auth/login"
+    modified: 1619160422289
+    created: 1619160077530
+    url: "{{ _.base_url }}/graphql"
     name: Login
     description: ""
     method: POST
     body:
-      mimeType: application/json
-      text: |-
-        {
-        	"email": "{{ _.userMail2 }}",
-        	"password": "{{ _.userPassword }}"
-        }
+      mimeType: application/graphql
+      text: '{"query":"mutation Login($input: LoginInput!) {\n  login (input: $input)
+        {\n    token\n    user_id\n    valid_until\n  }\n}","variables":{"input":{"email":"{{
+        _.userMail1 }}","password":"{{ _.userPassword
+        }}"}},"operationName":"Login"}'
     parameters: []
     headers:
       - name: Content-Type
         value: application/json
-        id: pair_acdd0010db534a6a87921f65d4809635
+        id: pair_37aa5742e96a4f61a4485b3a0ab56562
     authentication: {}
-    metaSortKey: -1614273555845
+    metaSortKey: -1614273555895
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -305,21 +331,27 @@ resources:
     environmentPropertyOrder: null
     metaSortKey: -1614273553203
     _type: request_group
-  - _id: req_a8058f3c495d42d38c17787085771f24
+  - _id: req_201ae13c299e4ac8adca687e3db81263
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1614273710136
-    created: 1614273623750
-    url: "{{base_url}}/api/auth/logout"
+    modified: 1619160475111
+    created: 1619160284183
+    url: "{{ _.base_url }}/graphql"
     name: Logout
     description: ""
     method: POST
-    body: {}
+    body:
+      mimeType: application/graphql
+      text: '{"query":"mutation LogoutUser {\n  logout
+        {\n    success\n  }\n}","operationName":"LogoutUser"}'
     parameters: []
-    headers: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_37aa5742e96a4f61a4485b3a0ab56562
     authentication:
       type: bearer
-      token: "{{token}}"
-    metaSortKey: -1603476684538.5
+      token: "{{ _.token }}"
+    metaSortKey: -1614273555870
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -330,7 +362,7 @@ resources:
     _type: request
   - _id: req_b18c0d50e98447988c931be0d6fe3ad3
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1619115454985
+    modified: 1619160397229
     created: 1619113764546
     url: "{{ _.base_url }}/graphql"
     name: Get Own User
@@ -369,7 +401,7 @@ resources:
     _type: request_group
   - _id: req_7323feb544504de69fd7fe9b5e2351ea
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1619115459801
+    modified: 1619160544314
     created: 1619115250725
     url: "{{ _.base_url }}/graphql"
     name: Get User By ID
@@ -399,7 +431,7 @@ resources:
     _type: request
   - _id: req_b89671c7536e4fc5ba14eb2ff0340d8e
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1619116483930
+    modified: 1619160542559
     created: 1619116119560
     url: "{{ _.base_url }}/graphql"
     name: Register New User
@@ -417,88 +449,8 @@ resources:
       - name: Content-Type
         value: application/json
         id: pair_37aa5742e96a4f61a4485b3a0ab56562
-    authentication:
-      type: bearer
-      token: "{{ _.token }}"
-    metaSortKey: -1618130198676.75
-    isPrivate: false
-    settingStoreCookies: true
-    settingSendCookies: true
-    settingDisableRenderRequestBody: false
-    settingEncodeUrl: true
-    settingRebuildPath: true
-    settingFollowRedirects: global
-    _type: request
-  - _id: req_d1062ec6f1bb4f079db01aedc5cdb6a8
-    parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1617899703221
-    created: 1614193498889
-    url: "{{base_url}}/api/user"
-    name: Register New User
-    description: ""
-    method: POST
-    body:
-      mimeType: application/json
-      text: |-
-        {
-        	"first_name": "Tom",
-        	"last_name": "Tester",
-        	"email": "{{ _.userMail2 }}",
-        	"password": "123456"
-        }
-    parameters: []
-    headers:
-      - name: Content-Type
-        value: application/json
-        id: pair_586dfdbb28684a13846e955ef2e35530
     authentication: {}
-    metaSortKey: -1592679813232
-    isPrivate: false
-    settingStoreCookies: true
-    settingSendCookies: true
-    settingDisableRenderRequestBody: false
-    settingEncodeUrl: true
-    settingRebuildPath: true
-    settingFollowRedirects: global
-    _type: request
-  - _id: req_b93c615d605346ef88e5338633492f58
-    parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1615734980743
-    created: 1614271661520
-    url: "{{base_url}}/api/user"
-    name: Get Own User
-    description: ""
-    method: GET
-    body: {}
-    parameters: []
-    headers: []
-    authentication:
-      type: bearer
-      token: "{{token}}"
-    metaSortKey: -1592679813207
-    isPrivate: false
-    settingStoreCookies: true
-    settingSendCookies: true
-    settingDisableRenderRequestBody: false
-    settingEncodeUrl: true
-    settingRebuildPath: true
-    settingFollowRedirects: global
-    _type: request
-  - _id: req_60f337b245164a19a6de5fe488943cd2
-    parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1615057149450
-    created: 1592679813182
-    url: "{{base_url}}/api/user/4"
-    name: Get User By ID
-    description: ""
-    method: GET
-    body: {}
-    parameters: []
-    headers: []
-    authentication:
-      type: bearer
-      token: "{{token}}"
-    metaSortKey: -1592679813182
+    metaSortKey: -1618130198676.75
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -509,12 +461,12 @@ resources:
     _type: request
   - _id: env_d6c69b45e2d7472f9bb28fdaf5513025a2ef8ac3
     parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
-    modified: 1619116475090
+    modified: 1619160464419
     created: 1592679770868
     name: Base Environment
     data:
-      token: "{% response 'body', 'req_408d1d59221044c1a6b61db7d388ee77',
-        'b64::JC50b2tlbg==::46b', 'never', 60 %}"
+      token: "{% response 'body', 'req_973a176e22564a8aae802142f020d94f',
+        'b64::JC5kYXRhLmxvZ2luLnRva2Vu::46b', 'never', 60 %}"
       shareModeNone: ""
       shareModeRead: READ
       shareModeReadWrite: READ_WRITE

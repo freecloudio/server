@@ -1,0 +1,15 @@
+type Session {
+	token: String!
+	user_id: ID!
+	valid_until: Time!
+}
+
+input LoginInput {
+	email: String!
+	password: String!
+}
+
+extend type Mutation {
+	login(input: LoginInput!): Session
+	logout: MutationResult
+}

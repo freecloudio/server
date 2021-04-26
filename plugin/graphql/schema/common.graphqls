@@ -1,0 +1,11 @@
+scalar Time
+
+type MutationResult {
+	success: Boolean!
+}
+
+type Query {
+	health: MutationResult!
+}
+
+type Mutation
