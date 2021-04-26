@@ -25,7 +25,6 @@ func NewRouter(managers *manager.Managers, cfg config.Config, addr string) (rout
 	ginRouter.Use(gin.Recovery())
 	ginRouter.Use(ginlogrus.Logger(logrus.New()))
 	ginRouter.Use(getAuthMiddleware(managers.Auth))
-	ginRouter.Use(getInjectGinContextMiddleware())
 
 	router = &Router{
 		engine:   ginRouter,

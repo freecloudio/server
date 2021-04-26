@@ -29,11 +29,7 @@ func (r *mutationResolver) RegisterUser(ctx context.Context, input model.UserInp
 }
 
 func (r *queryResolver) User(ctx context.Context, userID *string) (*models.User, error) {
-	ginCtx, fcerr := extractGinContext(ctx)
-	if fcerr != nil {
-		return nil, fcerr
-	}
-	authContext := getAuthContext(ginCtx)
+	authContext := getAuthContext(ctx)
 
 	// Get own user
 	if userID == nil {

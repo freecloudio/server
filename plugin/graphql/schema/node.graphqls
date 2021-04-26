@@ -1,0 +1,22 @@
+type Node {
+	id: ID!
+	created: Time!
+	updated: Time!
+
+	size: Int!
+	mime_type: String!
+	name: String!
+	OwnerID: ID!
+	ParentNodeID: ID
+	Type: NodeType!
+	IsStarred: Boolean!
+	Path: String!
+	FullPath: String!
+
+	content: [Node!]
+}
+
+enum NodeType {
+	FILE
+	FOLDER
+}

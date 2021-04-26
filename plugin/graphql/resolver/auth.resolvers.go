@@ -9,6 +9,7 @@ import (
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/plugin/gin/keys"
 	"github.com/freecloudio/server/plugin/graphql/generated"
 	"github.com/freecloudio/server/plugin/graphql/model"
 )
@@ -22,13 +23,10 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 }
 
 func (r *mutationResolver) Logout(ctx context.Context) (*model.MutationResult, error) {
-	ginCtx, fcerr := extractGinContext(ctx)
-	if fcerr != nil {
-		return nil, fcerr
-	}
-	authContext := getAuthContext(ginCtx)
+	authContext := getAuthContext(ctx)
 
-	if tokenInt, ok := ginCtx.Get(AuthTokenKey); authContext.Type == authorization.ContextTypeUser && ok {
+	var fcerr *fcerror.Error
+	if tokenInt := ctx.Value(keys.AuthTokenKey); authContext.Type == authorization.ContextTypeUser && tokenInt != nil {
 		token := tokenInt.(models.Token)
 		fcerr = r.managers.Auth.Logout(token)
 	} else {

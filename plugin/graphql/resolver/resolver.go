@@ -2,15 +2,12 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/manager"
-	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/plugin/gin/keys"
 	"github.com/sirupsen/logrus"
-
-	"github.com/gin-gonic/gin"
 )
 
 // This file will not be regenerated automatically.
@@ -28,32 +25,9 @@ func NewResolver(cfg config.Config, managers *manager.Managers) *Resolver {
 	return &Resolver{cfg, managers}
 }
 
-// TODO: Extract all keys into gin/keys package
-const (
-	GinContextKey  = "gin_context"
-	AuthContextKey = "authentication_context"
-	AuthTokenKey   = "authentication_token"
-)
-
-// TODO: Remove gin context, use normal one
-func extractGinContext(ctx context.Context) (ginCtx *gin.Context, fcerr *fcerror.Error) {
-	ginCtxInt := ctx.Value(GinContextKey)
-	if ginCtxInt == nil {
-		fcerr = fcerror.NewError(fcerror.ErrInternalServerError, fmt.Errorf("gin context not found in context"))
-		return
-	}
-
-	ginCtx, ok := ginCtxInt.(*gin.Context)
-	if !ok {
-		fcerr = fcerror.NewError(fcerror.ErrInternalServerError, fmt.Errorf("gin context has wrong type"))
-		return
-	}
-	return
-}
-
-func getAuthContext(c *gin.Context) *authorization.Context {
-	authContextInt, found := c.Get(AuthContextKey)
-	if !found {
+func getAuthContext(ctx context.Context) *authorization.Context {
+	authContextInt := ctx.Value(keys.AuthContextKey)
+	if authContextInt == nil {
 		logrus.Warn("AuthContext not found in gin context")
 		return authorization.NewAnonymous()
 	}
