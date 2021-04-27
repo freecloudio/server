@@ -6,17 +6,26 @@ type Node {
 	size: Int!
 	mime_type: String!
 	name: String!
-	OwnerID: ID!
-	ParentNodeID: ID
-	Type: NodeType!
-	IsStarred: Boolean!
-	Path: String!
-	FullPath: String!
+	owner_id: ID!
+	parent_node_id: ID
+	type: NodeType!
+	is_starred: Boolean!
+	path: String!
+	full_path: String!
 
-	content: [Node!]
+	files: [Node!]
 }
 
 enum NodeType {
 	FILE
 	FOLDER
+}
+
+input GetNodeInput {
+	id: ID
+	full_path: String
+}
+
+extend type Query {
+	node(input: GetNodeInput!): Node!
 }

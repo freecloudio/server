@@ -2,6 +2,11 @@
 
 package model
 
+type GetNodeInput struct {
+	ID       *string `json:"id"`
+	FullPath *string `json:"full_path"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

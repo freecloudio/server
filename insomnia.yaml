@@ -1,6 +1,6 @@
 _type: export
 __export_format: 4
-__export_date: 2021-04-23T06:49:41.591Z
+__export_date: 2021-04-27T09:02:36.124Z
 __export_source: insomnia.desktop.app:v2021.2.2
 resources:
   - _id: req_b8c4dd07416643549ddd88539306830a
@@ -38,31 +38,32 @@ resources:
     description: ""
     scope: collection
     _type: workspace
-  - _id: req_46d8f39ea4bd4913b0814e593994aab7
+  - _id: req_31708413b4404683a6b81bbdf12352d1
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1618510865563
-    created: 1615734480621
-    url: "{{base_url}}/api/node/create/"
-    name: Create Node By Parent ID
+    modified: 1619514126384
+    created: 1619511841109
+    url: "{{ _.base_url }}/graphql"
+    name: Get Node By Path
     description: ""
     method: POST
     body:
-      mimeType: application/json
-      text: >-
-        {
-        	"parent_node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
-        	"name": "{% prompt 'Path', '', '', '', false, true %}",
-        	"type": "{{ _.nodeTypeFile }}"
-        }
+      mimeType: application/graphql
+      text: "{\"query\":\"query GetNodeByPath($input: GetNodeInput!) {\\n  node(input:
+        $input) {\\n    ...FullNode\\n    files
+        {\\n      ...FullNode\\n    }\\n  }\\n}\\n\\nfragment FullNode on Node
+        {\\n  id\\n  created\\n  updated\\n  name\\n  size\\n  mime_type\\n  ow\
+        ner_id\\n  parent_node_id\\n  type\\n  is_starred\\n  full_path\\n}\\n\
+        \",\"variables\":{\"input\":{\"full_path\":\"{% prompt 'Path', '', '',
+        '', false, true %}\"}},\"operationName\":\"GetNodeByPath\"}"
     parameters: []
     headers:
       - name: Content-Type
         value: application/json
-        id: pair_bebcae5a1b324932862e00409a9abf14
+        id: pair_37aa5742e96a4f61a4485b3a0ab56562
     authentication:
       type: bearer
-      token: "{{token}}"
-    metaSortKey: -1615734480622
+      token: "{{ _.token }}"
+    metaSortKey: -1615734480672
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -81,6 +82,73 @@ resources:
     environmentPropertyOrder: null
     metaSortKey: -1615676401468
     _type: request_group
+  - _id: req_02b6601ea747474a97a1848758f935fd
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1619514130185
+    created: 1619514050181
+    url: "{{ _.base_url }}/graphql"
+    name: Get Node By ID
+    description: ""
+    method: POST
+    body:
+      mimeType: application/graphql
+      text: "{\"query\":\"query GetNodeByID($input: GetNodeInput!) {\\n  node(input:
+        $input) {\\n    ...FullNode\\n    files
+        {\\n      ...FullNode\\n    }\\n  }\\n}\\n\\nfragment FullNode on Node
+        {\\n  id\\n  created\\n  updated\\n  name\\n  size\\n  mime_type\\n  ow\
+        ner_id\\n  parent_node_id\\n  type\\n  is_starred\\n  full_path\\n}\\n\
+        \",\"variables\":{\"input\":{\"id\":\"{% prompt 'Node ID', '', '', '',
+        false, true %}\"}},\"operationName\":\"GetNodeByID\"}"
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_37aa5742e96a4f61a4485b3a0ab56562
+    authentication:
+      type: bearer
+      token: "{{ _.token }}"
+    metaSortKey: -1615734480647
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_46d8f39ea4bd4913b0814e593994aab7
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1619513862019
+    created: 1615734480621
+    url: "{{base_url}}/api/node/create/"
+    name: Create Node By Parent ID
+    description: ""
+    method: POST
+    body:
+      mimeType: application/json
+      text: >-
+        {
+        	"parent_node_id": "{% response 'body', 'req_c230359045644530b1cda4f08e8c4066', 'b64::JC5pZA==::46b', 'never', 60 %}",
+        	"name": "{% prompt 'Path', '', '', '', false, true %}",
+        	"type": "{{ _.nodeTypeFolder }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_bebcae5a1b324932862e00409a9abf14
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1615734480622
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
   - _id: req_c230359045644530b1cda4f08e8c4066
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
     modified: 1615735768323
@@ -294,7 +362,7 @@ resources:
     _type: request_group
   - _id: req_973a176e22564a8aae802142f020d94f
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1619160422289
+    modified: 1619511808453
     created: 1619160077530
     url: "{{ _.base_url }}/graphql"
     name: Login
@@ -362,7 +430,7 @@ resources:
     _type: request
   - _id: req_b18c0d50e98447988c931be0d6fe3ad3
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1619160397229
+    modified: 1619511822579
     created: 1619113764546
     url: "{{ _.base_url }}/graphql"
     name: Get Own User
@@ -401,7 +469,7 @@ resources:
     _type: request_group
   - _id: req_7323feb544504de69fd7fe9b5e2351ea
     parentId: fld_8952315ac3704cd385cbac89df3182a2
-    modified: 1619160544314
+    modified: 1619511825428
     created: 1619115250725
     url: "{{ _.base_url }}/graphql"
     name: Get User By ID

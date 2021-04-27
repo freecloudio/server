@@ -5,9 +5,13 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/freecloudio/server/domain/models"
+	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/plugin/graphql/generated"
+	"github.com/freecloudio/server/plugin/graphql/model"
+	"github.com/sirupsen/logrus"
 )
 
 func (r *nodeResolver) ID(ctx context.Context, obj *models.Node) (string, error) {
@@ -30,13 +34,37 @@ func (r *nodeResolver) ParentNodeID(ctx context.Context, obj *models.Node) (*str
 	return nil, nil
 }
 
-func (r *nodeResolver) Content(ctx context.Context, obj *models.Node) ([]*models.Node, error) {
-	if obj.Type != models.NodeTypeFile {
+func (r *nodeResolver) Files(ctx context.Context, obj *models.Node) ([]*models.Node, error) {
+	logrus.WithField("obj", obj).Warn("Files resolver called")
+	if obj.Type != models.NodeTypeFolder {
 		return nil, nil
 	}
-	authContext := getAuthContext(ctx)
+	authCtx := getAuthContext(ctx)
 
-	return r.managers.Node.ListByID(authContext, obj.ID)
+	content, fcerr := r.managers.Node.ListByID(authCtx, obj.ID)
+	if fcerr != nil {
+		return nil, fcerr
+	}
+	return content, nil
+}
+
+func (r *queryResolver) Node(ctx context.Context, input model.GetNodeInput) (*models.Node, error) {
+	authCtx := getAuthContext(ctx)
+
+	var node *models.Node
+	var fcerr *fcerror.Error
+	if input.ID != nil {
+		node, fcerr = r.managers.Node.GetNodeByID(authCtx, models.NodeID(*input.ID))
+	} else if input.FullPath != nil {
+		node, fcerr = r.managers.Node.GetNodeByPath(authCtx, *input.FullPath)
+	} else {
+		return nil, fcerror.NewError(fcerror.ErrBadRequest, fmt.Errorf("Node ID or FullPath missing"))
+	}
+
+	if fcerr != nil {
+		return nil, fcerr
+	}
+	return node, nil
 }
 
 // Node returns generated.NodeResolver implementation.
