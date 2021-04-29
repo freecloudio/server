@@ -207,7 +207,7 @@ func (mgr *nodeManager) DownloadFile(authCtx *authorization.Context, nodeID mode
 
 	// TODO: Support folder download
 	if node.Type == models.NodeTypeFolder {
-		fcerr = fcerror.NewError(fcerror.ErrUnknown, errors.New("Downloading folder not yet supported"))
+		fcerr = fcerror.NewError(fcerror.ErrNotYetSupported, errors.New("Downloading folder not yet supported"))
 		return
 	}
 

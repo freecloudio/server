@@ -7,8 +7,8 @@ import (
 )
 
 func (r *Router) buildGraphQLRoutes() {
-	grp := r.engine.Group("/graphql")
+	grp := r.engine.Group("/api/graphql")
 
 	grp.POST("", gin.WrapH(graphql.GetGraphQLHandler(r.cfg, r.managers)))
-	grp.GET("playground", gin.WrapH(graphql.GetGraphQLPlaygroundHandler(r.cfg)))
+	grp.GET("", gin.WrapH(graphql.GetGraphQLPlaygroundHandler(r.cfg)))
 }

@@ -49,10 +49,7 @@ func (r *Router) Shutdown(ctx context.Context) error {
 }
 
 func (r *Router) buildRoutes() {
-	r.buildAuthRoutes()
-	r.buildUserRoutes()
 	r.buildNodeRoutes()
-	r.buildShareRoutes()
 	r.buildGraphQLRoutes()
 
 	r.engine.GET("/health", func(c *gin.Context) {

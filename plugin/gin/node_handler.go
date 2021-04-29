@@ -20,61 +20,8 @@ const (
 func (r *Router) buildNodeRoutes() {
 	grp := r.engine.Group("/api/node")
 
-	grp.GET("info/path/*"+pathParam, r.getNodeInfoByPath)
-	grp.GET("info/id/:"+nodeIDParam, r.getNodeInfoByID)
-	grp.GET("list/id/:"+nodeIDParam, r.getNodeListByID)
-	grp.GET("content/id/:"+nodeIDParam, r.getNodeContentByID)
-	grp.POST("create/", r.createNodeByID)
-	grp.POST("upload/id/:"+nodeIDParam, r.uploadFileByID)
-}
-
-func (r *Router) getNodeInfoByPath(c *gin.Context) {
-	authContext := getAuthContext(c)
-	path := c.Param(pathParam)
-
-	node, fcerr := r.managers.Node.GetNodeByPath(authContext, path)
-	if fcerr != nil {
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	c.JSON(http.StatusOK, node)
-}
-
-func (r *Router) getNodeInfoByID(c *gin.Context) {
-	authContext := getAuthContext(c)
-	nodeID, fcerr := extractNodeID(c)
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	node, fcerr := r.managers.Node.GetNodeByID(authContext, nodeID)
-	if fcerr != nil {
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	c.JSON(http.StatusOK, node)
-}
-
-func (r *Router) getNodeListByID(c *gin.Context) {
-	authContext := getAuthContext(c)
-	nodeID, fcerr := extractNodeID(c)
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	list, fcerr := r.managers.Node.ListByID(authContext, nodeID)
-	if fcerr != nil {
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	c.JSON(http.StatusOK, list)
+	grp.GET(":"+nodeIDParam, r.getNodeContentByID)
+	grp.POST(":"+nodeIDParam, r.uploadFileByID)
 }
 
 func (r *Router) getNodeContentByID(c *gin.Context) {
@@ -94,26 +41,6 @@ func (r *Router) getNodeContentByID(c *gin.Context) {
 	defer reader.Close()
 
 	c.DataFromReader(http.StatusOK, size, string(node.MimeType), reader, nil)
-}
-
-func (r *Router) createNodeByID(c *gin.Context) {
-	authContext := getAuthContext(c)
-
-	node := &models.Node{}
-	err := c.BindJSON(node)
-	if err != nil {
-		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	created, fcerr := r.managers.Node.CreateNode(authContext, node)
-	if fcerr != nil {
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"node": node, "created": created})
 }
 
 func (r *Router) uploadFileByID(c *gin.Context) {
