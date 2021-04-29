@@ -41,6 +41,7 @@ type ResolverRoot interface {
 	Node() NodeResolver
 	Query() QueryResolver
 	Session() SessionResolver
+	Share() ShareResolver
 	User() UserResolver
 }
 
@@ -53,6 +54,7 @@ type ComplexityRoot struct {
 		Login        func(childComplexity int, input model.LoginInput) int
 		Logout       func(childComplexity int) int
 		RegisterUser func(childComplexity int, input model.UserInput) int
+		ShareNode    func(childComplexity int, input model.ShareInput) int
 	}
 
 	MutationResult struct {
@@ -80,6 +82,11 @@ type ComplexityRoot struct {
 		Node    func(childComplexity int) int
 	}
 
+	NodeShareResult struct {
+		Created func(childComplexity int) int
+		Share   func(childComplexity int) int
+	}
+
 	Query struct {
 		Health func(childComplexity int) int
 		Node   func(childComplexity int, input model.NodeIdentifierInput) int
@@ -90,6 +97,12 @@ type ComplexityRoot struct {
 		Token      func(childComplexity int) int
 		UserID     func(childComplexity int) int
 		ValidUntil func(childComplexity int) int
+	}
+
+	Share struct {
+		Mode       func(childComplexity int) int
+		Node       func(childComplexity int) int
+		SharedWith func(childComplexity int) int
 	}
 
 	User struct {
@@ -108,6 +121,7 @@ type MutationResolver interface {
 	Login(ctx context.Context, input model.LoginInput) (*models.Session, error)
 	Logout(ctx context.Context) (*model.MutationResult, error)
 	CreateNode(ctx context.Context, input model.NodeInput) (*model.NodeCreationResult, error)
+	ShareNode(ctx context.Context, input model.ShareInput) (*model.NodeShareResult, error)
 	RegisterUser(ctx context.Context, input model.UserInput) (*models.User, error)
 }
 type NodeResolver interface {
@@ -128,6 +142,10 @@ type QueryResolver interface {
 type SessionResolver interface {
 	Token(ctx context.Context, obj *models.Session) (string, error)
 	UserID(ctx context.Context, obj *models.Session) (string, error)
+}
+type ShareResolver interface {
+	Node(ctx context.Context, obj *models.Share) (*models.Node, error)
+	SharedWith(ctx context.Context, obj *models.Share) (*models.User, error)
 }
 type UserResolver interface {
 	ID(ctx context.Context, obj *models.User) (string, error)
@@ -190,6 +208,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RegisterUser(childComplexity, args["input"].(model.UserInput)), true
+
+	case "Mutation.shareNode":
+		if e.complexity.Mutation.ShareNode == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_shareNode_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ShareNode(childComplexity, args["input"].(model.ShareInput)), true
 
 	case "MutationResult.success":
 		if e.complexity.MutationResult.Success == nil {
@@ -303,6 +333,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.NodeCreationResult.Node(childComplexity), true
 
+	case "NodeShareResult.created":
+		if e.complexity.NodeShareResult.Created == nil {
+			break
+		}
+
+		return e.complexity.NodeShareResult.Created(childComplexity), true
+
+	case "NodeShareResult.share":
+		if e.complexity.NodeShareResult.Share == nil {
+			break
+		}
+
+		return e.complexity.NodeShareResult.Share(childComplexity), true
+
 	case "Query.health":
 		if e.complexity.Query.Health == nil {
 			break
@@ -354,6 +398,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Session.ValidUntil(childComplexity), true
+
+	case "Share.mode":
+		if e.complexity.Share.Mode == nil {
+			break
+		}
+
+		return e.complexity.Share.Mode(childComplexity), true
+
+	case "Share.node":
+		if e.complexity.Share.Node == nil {
+			break
+		}
+
+		return e.complexity.Share.Node(childComplexity), true
+
+	case "Share.shared_with":
+		if e.complexity.Share.SharedWith == nil {
+			break
+		}
+
+		return e.complexity.Share.SharedWith(childComplexity), true
 
 	case "User.created":
 		if e.complexity.User.Created == nil {
@@ -547,6 +612,31 @@ extend type Query {
 extend type Mutation {
 	createNode(input: NodeInput!): NodeCreationResult!
 }`, BuiltIn: false},
+	{Name: "schema/share.graphqls", Input: `type Share {
+	node: Node!
+	shared_with: User!
+	mode: ShareMode!
+}
+
+enum ShareMode {
+	READ
+	READ_WRITE
+}
+
+input ShareInput {
+	node_id: ID!
+	shared_with_id: ID!
+	mode: ShareMode!
+}
+
+type NodeShareResult {
+	created: Boolean!
+	share: Share!
+}
+
+extend type Mutation {
+	shareNode(input: ShareInput!): NodeShareResult!
+}`, BuiltIn: false},
 	{Name: "schema/user.graphqls", Input: `type User {
   id: ID!
   created: Time!
@@ -618,6 +708,21 @@ func (ec *executionContext) field_Mutation_registerUser_args(ctx context.Context
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNUserInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐUserInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_shareNode_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.ShareInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNShareInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐShareInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -820,6 +925,48 @@ func (ec *executionContext) _Mutation_createNode(ctx context.Context, field grap
 	res := resTmp.(*model.NodeCreationResult)
 	fc.Result = res
 	return ec.marshalNNodeCreationResult2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeCreationResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_shareNode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_shareNode_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ShareNode(rctx, args["input"].(model.ShareInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.NodeShareResult)
+	fc.Result = res
+	return ec.marshalNNodeShareResult2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeShareResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_registerUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1418,6 +1565,76 @@ func (ec *executionContext) _NodeCreationResult_node(ctx context.Context, field 
 	return ec.marshalNNode2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNode(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _NodeShareResult_created(ctx context.Context, field graphql.CollectedField, obj *model.NodeShareResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "NodeShareResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Created, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NodeShareResult_share(ctx context.Context, field graphql.CollectedField, obj *model.NodeShareResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "NodeShareResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Share, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Share)
+	fc.Result = res
+	return ec.marshalNShare2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐShare(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_health(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1711,6 +1928,111 @@ func (ec *executionContext) _Session_valid_until(ctx context.Context, field grap
 	res := resTmp.(time.Time)
 	fc.Result = res
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Share_node(ctx context.Context, field graphql.CollectedField, obj *models.Share) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Share",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Share().Node(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Node)
+	fc.Result = res
+	return ec.marshalNNode2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNode(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Share_shared_with(ctx context.Context, field graphql.CollectedField, obj *models.Share) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Share",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Share().SharedWith(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Share_mode(ctx context.Context, field graphql.CollectedField, obj *models.Share) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Share",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Mode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(models.ShareMode)
+	fc.Result = res
+	return ec.marshalNShareMode2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐShareMode(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *models.User) (ret graphql.Marshaler) {
@@ -3172,6 +3494,42 @@ func (ec *executionContext) unmarshalInputNodeInput(ctx context.Context, obj int
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputShareInput(ctx context.Context, obj interface{}) (model.ShareInput, error) {
+	var it model.ShareInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "node_id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("node_id"))
+			it.NodeID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "shared_with_id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("shared_with_id"))
+			it.SharedWithID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "mode":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
+			it.Mode, err = ec.unmarshalNShareMode2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐShareMode(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUserInput(ctx context.Context, obj interface{}) (model.UserInput, error) {
 	var it model.UserInput
 	var asMap = obj.(map[string]interface{})
@@ -3245,6 +3603,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec._Mutation_logout(ctx, field)
 		case "createNode":
 			out.Values[i] = ec._Mutation_createNode(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "shareNode":
+			out.Values[i] = ec._Mutation_shareNode(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -3449,6 +3812,38 @@ func (ec *executionContext) _NodeCreationResult(ctx context.Context, sel ast.Sel
 	return out
 }
 
+var nodeShareResultImplementors = []string{"NodeShareResult"}
+
+func (ec *executionContext) _NodeShareResult(ctx context.Context, sel ast.SelectionSet, obj *model.NodeShareResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, nodeShareResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("NodeShareResult")
+		case "created":
+			out.Values[i] = ec._NodeShareResult_created(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "share":
+			out.Values[i] = ec._NodeShareResult_share(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -3562,6 +3957,61 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 			})
 		case "valid_until":
 			out.Values[i] = ec._Session_valid_until(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var shareImplementors = []string{"Share"}
+
+func (ec *executionContext) _Share(ctx context.Context, sel ast.SelectionSet, obj *models.Share) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, shareImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Share")
+		case "node":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Share_node(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "shared_with":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Share_shared_with(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "mode":
+			out.Values[i] = ec._Share_mode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
@@ -3999,6 +4449,20 @@ func (ec *executionContext) unmarshalNNodeInput2githubᚗcomᚋfreecloudioᚋser
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNNodeShareResult2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeShareResult(ctx context.Context, sel ast.SelectionSet, v model.NodeShareResult) graphql.Marshaler {
+	return ec._NodeShareResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNNodeShareResult2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeShareResult(ctx context.Context, sel ast.SelectionSet, v *model.NodeShareResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._NodeShareResult(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNNodeType2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNodeType(ctx context.Context, v interface{}) (models.NodeType, error) {
 	tmp, err := graphql.UnmarshalString(v)
 	res := models.NodeType(tmp)
@@ -4006,6 +4470,37 @@ func (ec *executionContext) unmarshalNNodeType2githubᚗcomᚋfreecloudioᚋserv
 }
 
 func (ec *executionContext) marshalNNodeType2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNodeType(ctx context.Context, sel ast.SelectionSet, v models.NodeType) graphql.Marshaler {
+	res := graphql.MarshalString(string(v))
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) marshalNShare2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐShare(ctx context.Context, sel ast.SelectionSet, v *models.Share) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Share(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNShareInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐShareInput(ctx context.Context, v interface{}) (model.ShareInput, error) {
+	res, err := ec.unmarshalInputShareInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNShareMode2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐShareMode(ctx context.Context, v interface{}) (models.ShareMode, error) {
+	tmp, err := graphql.UnmarshalString(v)
+	res := models.ShareMode(tmp)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNShareMode2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐShareMode(ctx context.Context, sel ast.SelectionSet, v models.ShareMode) graphql.Marshaler {
 	res := graphql.MarshalString(string(v))
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {

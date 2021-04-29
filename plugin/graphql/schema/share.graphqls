@@ -1,0 +1,25 @@
+type Share {
+	node: Node!
+	shared_with: User!
+	mode: ShareMode!
+}
+
+enum ShareMode {
+	READ
+	READ_WRITE
+}
+
+input ShareInput {
+	node_id: ID!
+	shared_with_id: ID!
+	mode: ShareMode!
+}
+
+type NodeShareResult {
+	created: Boolean!
+	share: Share!
+}
+
+extend type Mutation {
+	shareNode(input: ShareInput!): NodeShareResult!
+}

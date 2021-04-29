@@ -45,7 +45,7 @@ func (r *queryResolver) User(ctx context.Context, userID *string) (*models.User,
 		return nil, fcerr
 	}
 
-	return user, fcerr
+	return user, nil
 }
 
 func (r *userResolver) ID(ctx context.Context, obj *models.User) (string, error) {

@@ -344,21 +344,6 @@ func (mr *MockNodeManagerMockRecorder) ListByID(arg0, arg1 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByID", reflect.TypeOf((*MockNodeManager)(nil).ListByID), arg0, arg1)
 }
 
-// UploadFile mocks base method.
-func (m *MockNodeManager) UploadFile(arg0 *authorization.Context, arg1 *models.Node, arg2 string) (bool, *fcerror.Error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadFile", arg0, arg1, arg2)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*fcerror.Error)
-	return ret0, ret1
-}
-
-// UploadFile indicates an expected call of UploadFile.
-func (mr *MockNodeManagerMockRecorder) UploadFile(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockNodeManager)(nil).UploadFile), arg0, arg1, arg2)
-}
-
 // UploadFileByID mocks base method.
 func (m *MockNodeManager) UploadFileByID(arg0 *authorization.Context, arg1 models.NodeID, arg2 string) *fcerror.Error {
 	m.ctrl.T.Helper()

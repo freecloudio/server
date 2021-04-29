@@ -110,7 +110,7 @@ func (mgr *userManager) CreateUser(user *models.User) (session *models.Session, 
 }
 
 func (mgr *userManager) GetUserByID(authCtx *authorization.Context, userID models.UserID) (user *models.User, fcerr *fcerror.Error) {
-	fcerr = authorization.EnforceSelf(authCtx, userID)
+	fcerr = authorization.EnforceUser(authCtx)
 	if fcerr != nil {
 		return
 	}

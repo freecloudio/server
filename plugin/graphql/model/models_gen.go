@@ -31,6 +31,17 @@ type NodeInput struct {
 	Type                 models.NodeType      `json:"type"`
 }
 
+type NodeShareResult struct {
+	Created bool          `json:"created"`
+	Share   *models.Share `json:"share"`
+}
+
+type ShareInput struct {
+	NodeID       string           `json:"node_id"`
+	SharedWithID string           `json:"shared_with_id"`
+	Mode         models.ShareMode `json:"mode"`
+}
+
 type UserInput struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
