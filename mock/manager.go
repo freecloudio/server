@@ -254,13 +254,12 @@ func (mr *MockNodeManagerMockRecorder) Close() *gomock.Call {
 }
 
 // CreateNode mocks base method.
-func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 *models.Node) (bool, *models.Node, *fcerror.Error) {
+func (m *MockNodeManager) CreateNode(arg0 *authorization.Context, arg1 *models.Node) (bool, *fcerror.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNode", arg0, arg1)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*models.Node)
-	ret2, _ := ret[2].(*fcerror.Error)
-	return ret0, ret1, ret2
+	ret1, _ := ret[1].(*fcerror.Error)
+	return ret0, ret1
 }
 
 // CreateNode indicates an expected call of CreateNode.
@@ -346,13 +345,12 @@ func (mr *MockNodeManagerMockRecorder) ListByID(arg0, arg1 interface{}) *gomock.
 }
 
 // UploadFile mocks base method.
-func (m *MockNodeManager) UploadFile(arg0 *authorization.Context, arg1 *models.Node, arg2 string) (bool, *models.Node, *fcerror.Error) {
+func (m *MockNodeManager) UploadFile(arg0 *authorization.Context, arg1 *models.Node, arg2 string) (bool, *fcerror.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadFile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*models.Node)
-	ret2, _ := ret[2].(*fcerror.Error)
-	return ret0, ret1, ret2
+	ret1, _ := ret[1].(*fcerror.Error)
+	return ret0, ret1
 }
 
 // UploadFile indicates an expected call of UploadFile.

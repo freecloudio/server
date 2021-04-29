@@ -21,11 +21,26 @@ enum NodeType {
 	FOLDER
 }
 
-input GetNodeInput {
+input NodeIdentifierInput {
 	id: ID
 	full_path: String
 }
 
+input NodeInput {
+	parent_node_identifier: NodeIdentifierInput!
+	name: String!
+	type: NodeType!
+}
+
+type NodeCreationResult {
+	created: Boolean!
+	node: Node!
+}
+
 extend type Query {
-	node(input: GetNodeInput!): Node!
+	node(input: NodeIdentifierInput!): Node!
+}
+
+extend type Mutation {
+	createNode(input: NodeInput!): NodeCreationResult!
 }

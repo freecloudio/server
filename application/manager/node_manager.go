@@ -18,8 +18,7 @@ type NodeManager interface {
 	GetNodeByPath(authCtx *authorization.Context, path string) (*models.Node, *fcerror.Error)
 	GetNodeByID(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, *fcerror.Error)
 	ListByID(authCtx *authorization.Context, nodeID models.NodeID) ([]*models.Node, *fcerror.Error)
-	CreateNode(authCtx *authorization.Context, node *models.Node) (bool, *models.Node, *fcerror.Error)
-	UploadFile(authCtx *authorization.Context, node *models.Node, uploadFilePath string) (bool, *models.Node, *fcerror.Error)
+	CreateNode(authCtx *authorization.Context, node *models.Node) (bool, *fcerror.Error)
 	UploadFileByID(authCtx *authorization.Context, nodeID models.NodeID, uploadFilePath string) *fcerror.Error
 	DownloadFile(authCtx *authorization.Context, nodeID models.NodeID) (*models.Node, io.ReadCloser, int64, *fcerror.Error)
 	Close()
@@ -75,7 +74,7 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 	return
 }
 
-func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, node *models.Node) (created bool, returnNode *models.Node, fcerr *fcerror.Error) {
+func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, node *models.Node) (created bool, fcerr *fcerror.Error) {
 	// TODO: Sanitize Name
 
 	fcerr = authorization.EnforceUser(authCtx)
@@ -95,7 +94,7 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, node *models.
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
-	returnNode, created, fcerr = trans.CreateNodeByID(authCtx.User.ID, node.Type, *node.ParentNodeID, node.Name)
+	created, fcerr = trans.CreateNodeByID(authCtx.User.ID, node)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to create node")
 		return
@@ -105,26 +104,11 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, node *models.
 		return
 	}
 
-	fcerr = mgr.fileStorage.CreateEmptyFileOrFolder(returnNode)
+	fcerr = mgr.fileStorage.CreateEmptyFileOrFolder(node)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("node", returnNode).Error("Failed to create empty file or folder")
+		logrus.WithError(fcerr).WithField("node", node).Error("Failed to create empty file or folder")
 	}
 
-	return
-}
-
-func (mgr *nodeManager) UploadFile(authCtx *authorization.Context, node *models.Node, uploadFilePath string) (created bool, returnNode *models.Node, fcerr *fcerror.Error) {
-	node.Type = models.NodeTypeFile
-
-	created, returnNode, fcerr = mgr.CreateNode(authCtx, node)
-	if fcerr != nil {
-		return
-	}
-
-	fcerr = mgr.UploadFileByID(authCtx, node.ID, uploadFilePath)
-	if fcerr != nil {
-		return
-	}
 	return
 }
 

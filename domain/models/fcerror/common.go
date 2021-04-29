@@ -5,6 +5,7 @@ const (
 	ErrModelConversionFailed
 	ErrBadRequest
 	ErrInternalServerError
+	ErrNotYetSupported
 )
 
 func init() {
@@ -12,4 +13,5 @@ func init() {
 	errorDescriptions[ErrModelConversionFailed] = "Failed to convert models"
 	errorDescriptions[ErrBadRequest] = "Bad Request"
 	errorDescriptions[ErrInternalServerError] = "Internal Server Error"
+	errorDescriptions[ErrNotYetSupported] = "This feature or option is not yet supported"
 }

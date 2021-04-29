@@ -49,6 +49,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Mutation struct {
+		CreateNode   func(childComplexity int, input model.NodeInput) int
 		Login        func(childComplexity int, input model.LoginInput) int
 		Logout       func(childComplexity int) int
 		RegisterUser func(childComplexity int, input model.UserInput) int
@@ -74,9 +75,14 @@ type ComplexityRoot struct {
 		Updated      func(childComplexity int) int
 	}
 
+	NodeCreationResult struct {
+		Created func(childComplexity int) int
+		Node    func(childComplexity int) int
+	}
+
 	Query struct {
 		Health func(childComplexity int) int
-		Node   func(childComplexity int, input model.GetNodeInput) int
+		Node   func(childComplexity int, input model.NodeIdentifierInput) int
 		User   func(childComplexity int, userID *string) int
 	}
 
@@ -101,6 +107,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	Login(ctx context.Context, input model.LoginInput) (*models.Session, error)
 	Logout(ctx context.Context) (*model.MutationResult, error)
+	CreateNode(ctx context.Context, input model.NodeInput) (*model.NodeCreationResult, error)
 	RegisterUser(ctx context.Context, input model.UserInput) (*models.User, error)
 }
 type NodeResolver interface {
@@ -115,7 +122,7 @@ type NodeResolver interface {
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (*model.MutationResult, error)
-	Node(ctx context.Context, input model.GetNodeInput) (*models.Node, error)
+	Node(ctx context.Context, input model.NodeIdentifierInput) (*models.Node, error)
 	User(ctx context.Context, userID *string) (*models.User, error)
 }
 type SessionResolver interface {
@@ -140,6 +147,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Mutation.createNode":
+		if e.complexity.Mutation.CreateNode == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createNode_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateNode(childComplexity, args["input"].(model.NodeInput)), true
 
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
@@ -270,6 +289,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Node.Updated(childComplexity), true
 
+	case "NodeCreationResult.created":
+		if e.complexity.NodeCreationResult.Created == nil {
+			break
+		}
+
+		return e.complexity.NodeCreationResult.Created(childComplexity), true
+
+	case "NodeCreationResult.node":
+		if e.complexity.NodeCreationResult.Node == nil {
+			break
+		}
+
+		return e.complexity.NodeCreationResult.Node(childComplexity), true
+
 	case "Query.health":
 		if e.complexity.Query.Health == nil {
 			break
@@ -287,7 +320,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Node(childComplexity, args["input"].(model.GetNodeInput)), true
+		return e.complexity.Query.Node(childComplexity, args["input"].(model.NodeIdentifierInput)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -491,13 +524,28 @@ enum NodeType {
 	FOLDER
 }
 
-input GetNodeInput {
+input NodeIdentifierInput {
 	id: ID
 	full_path: String
 }
 
+input NodeInput {
+	parent_node_identifier: NodeIdentifierInput!
+	name: String!
+	type: NodeType!
+}
+
+type NodeCreationResult {
+	created: Boolean!
+	node: Node!
+}
+
 extend type Query {
-	node(input: GetNodeInput!): Node!
+	node(input: NodeIdentifierInput!): Node!
+}
+
+extend type Mutation {
+	createNode(input: NodeInput!): NodeCreationResult!
 }`, BuiltIn: false},
 	{Name: "schema/user.graphqls", Input: `type User {
   id: ID!
@@ -532,6 +580,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_createNode_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.NodeInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNNodeInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -581,10 +644,10 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_node_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.GetNodeInput
+	var arg0 model.NodeIdentifierInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNGetNodeInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐGetNodeInput(ctx, tmp)
+		arg0, err = ec.unmarshalNNodeIdentifierInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeIdentifierInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -715,6 +778,48 @@ func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.
 	res := resTmp.(*model.MutationResult)
 	fc.Result = res
 	return ec.marshalOMutationResult2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐMutationResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_createNode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createNode_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateNode(rctx, args["input"].(model.NodeInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.NodeCreationResult)
+	fc.Result = res
+	return ec.marshalNNodeCreationResult2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeCreationResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_registerUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1243,6 +1348,76 @@ func (ec *executionContext) _Node_files(ctx context.Context, field graphql.Colle
 	return ec.marshalONode2ᚕᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNodeᚄ(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _NodeCreationResult_created(ctx context.Context, field graphql.CollectedField, obj *model.NodeCreationResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "NodeCreationResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Created, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NodeCreationResult_node(ctx context.Context, field graphql.CollectedField, obj *model.NodeCreationResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "NodeCreationResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Node)
+	fc.Result = res
+	return ec.marshalNNode2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNode(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_health(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1303,7 +1478,7 @@ func (ec *executionContext) _Query_node(ctx context.Context, field graphql.Colle
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Node(rctx, args["input"].(model.GetNodeInput))
+		return ec.resolvers.Query().Node(rctx, args["input"].(model.NodeIdentifierInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2905,8 +3080,36 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputGetNodeInput(ctx context.Context, obj interface{}) (model.GetNodeInput, error) {
-	var it model.GetNodeInput
+func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj interface{}) (model.LoginInput, error) {
+	var it model.LoginInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "email":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+			it.Email, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "password":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			it.Password, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputNodeIdentifierInput(ctx context.Context, obj interface{}) (model.NodeIdentifierInput, error) {
+	var it model.NodeIdentifierInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -2933,25 +3136,33 @@ func (ec *executionContext) unmarshalInputGetNodeInput(ctx context.Context, obj 
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj interface{}) (model.LoginInput, error) {
-	var it model.LoginInput
+func (ec *executionContext) unmarshalInputNodeInput(ctx context.Context, obj interface{}) (model.NodeInput, error) {
+	var it model.NodeInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
 		switch k {
-		case "email":
+		case "parent_node_identifier":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			it.Email, err = ec.unmarshalNString2string(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_node_identifier"))
+			it.ParentNodeIdentifier, err = ec.unmarshalNNodeIdentifierInput2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeIdentifierInput(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "password":
+		case "name":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
-			it.Password, err = ec.unmarshalNString2string(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "type":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			it.Type, err = ec.unmarshalNNodeType2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNodeType(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3032,6 +3243,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec._Mutation_login(ctx, field)
 		case "logout":
 			out.Values[i] = ec._Mutation_logout(ctx, field)
+		case "createNode":
+			out.Values[i] = ec._Mutation_createNode(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "registerUser":
 			out.Values[i] = ec._Mutation_registerUser(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -3190,6 +3406,38 @@ func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj
 				res = ec._Node_files(ctx, field, obj)
 				return res
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var nodeCreationResultImplementors = []string{"NodeCreationResult"}
+
+func (ec *executionContext) _NodeCreationResult(ctx context.Context, sel ast.SelectionSet, obj *model.NodeCreationResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, nodeCreationResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("NodeCreationResult")
+		case "created":
+			out.Values[i] = ec._NodeCreationResult_created(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "node":
+			out.Values[i] = ec._NodeCreationResult_node(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3659,11 +3907,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNGetNodeInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐGetNodeInput(ctx context.Context, v interface{}) (model.GetNodeInput, error) {
-	res, err := ec.unmarshalInputGetNodeInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3725,6 +3968,35 @@ func (ec *executionContext) marshalNNode2ᚖgithubᚗcomᚋfreecloudioᚋserver�
 		return graphql.Null
 	}
 	return ec._Node(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNNodeCreationResult2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeCreationResult(ctx context.Context, sel ast.SelectionSet, v model.NodeCreationResult) graphql.Marshaler {
+	return ec._NodeCreationResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNNodeCreationResult2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeCreationResult(ctx context.Context, sel ast.SelectionSet, v *model.NodeCreationResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._NodeCreationResult(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNNodeIdentifierInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeIdentifierInput(ctx context.Context, v interface{}) (model.NodeIdentifierInput, error) {
+	res, err := ec.unmarshalInputNodeIdentifierInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNNodeIdentifierInput2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeIdentifierInput(ctx context.Context, v interface{}) (*model.NodeIdentifierInput, error) {
+	res, err := ec.unmarshalInputNodeIdentifierInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNNodeInput2githubᚗcomᚋfreecloudioᚋserverᚋpluginᚋgraphqlᚋmodelᚐNodeInput(ctx context.Context, v interface{}) (model.NodeInput, error) {
+	res, err := ec.unmarshalInputNodeInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNNodeType2githubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNodeType(ctx context.Context, v interface{}) (models.NodeType, error) {

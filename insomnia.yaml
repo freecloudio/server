@@ -1,7 +1,7 @@
 _type: export
 __export_format: 4
-__export_date: 2021-04-27T09:02:36.124Z
-__export_source: insomnia.desktop.app:v2021.2.2
+__export_date: 2021-04-29T19:26:54.497Z
+__export_source: insomnia.desktop.app:v2021.2.1
 resources:
   - _id: req_b8c4dd07416643549ddd88539306830a
     parentId: wrk_085358b34fdd4e32b74557ce56fdda2a
@@ -40,7 +40,7 @@ resources:
     _type: workspace
   - _id: req_31708413b4404683a6b81bbdf12352d1
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1619514126384
+    modified: 1619724374100
     created: 1619511841109
     url: "{{ _.base_url }}/graphql"
     name: Get Node By Path
@@ -48,8 +48,8 @@ resources:
     method: POST
     body:
       mimeType: application/graphql
-      text: "{\"query\":\"query GetNodeByPath($input: GetNodeInput!) {\\n  node(input:
-        $input) {\\n    ...FullNode\\n    files
+      text: "{\"query\":\"query GetNodeByPath($input: NodeIdentifierInput!)
+        {\\n  node(input: $input) {\\n    ...FullNode\\n    files
         {\\n      ...FullNode\\n    }\\n  }\\n}\\n\\nfragment FullNode on Node
         {\\n  id\\n  created\\n  updated\\n  name\\n  size\\n  mime_type\\n  ow\
         ner_id\\n  parent_node_id\\n  type\\n  is_starred\\n  full_path\\n}\\n\
@@ -84,7 +84,7 @@ resources:
     _type: request_group
   - _id: req_02b6601ea747474a97a1848758f935fd
     parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1619514130185
+    modified: 1619723835144
     created: 1619514050181
     url: "{{ _.base_url }}/graphql"
     name: Get Node By ID
@@ -92,8 +92,8 @@ resources:
     method: POST
     body:
       mimeType: application/graphql
-      text: "{\"query\":\"query GetNodeByID($input: GetNodeInput!) {\\n  node(input:
-        $input) {\\n    ...FullNode\\n    files
+      text: "{\"query\":\"query GetNodeByID($input: NodeIdentifierInput!)
+        {\\n  node(input: $input) {\\n    ...FullNode\\n    files
         {\\n      ...FullNode\\n    }\\n  }\\n}\\n\\nfragment FullNode on Node
         {\\n  id\\n  created\\n  updated\\n  name\\n  size\\n  mime_type\\n  ow\
         ner_id\\n  parent_node_id\\n  type\\n  is_starred\\n  full_path\\n}\\n\
@@ -108,6 +108,42 @@ resources:
       type: bearer
       token: "{{ _.token }}"
     metaSortKey: -1615734480647
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_fe6fb82e8c514426b9261d7a25dd4e1a
+    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
+    modified: 1619724370182
+    created: 1619723709403
+    url: "{{ _.base_url }}/graphql"
+    name: Create Node By Parent ID
+    description: ""
+    method: POST
+    body:
+      mimeType: application/graphql
+      text: "{\"query\":\"mutation CreateNode($input: NodeInput!)
+        {\\n  createNode(input: $input) {\\n    created\\n    node
+        {\\n      ...FullNode\\n    }\\n  }\\n}\\n\\nfragment FullNode on Node
+        {\\n  id\\n  created\\n  updated\\n  name\\n  size\\n  mime_type\\n  ow\
+        ner_id\\n  parent_node_id\\n  type\\n  is_starred\\n  full_path\\n}\\n\
+        \",\"variables\":{\"input\":{\"parent_node_identifier\":{\"id\":\"{%
+        prompt 'Node ID', '', '', '', false, true
+        %}\"},\"name\":\"nested_folder\",\"type\":\"{{ _.nodeTypeFolder
+        }}\"}},\"operationName\":\"CreateNode\"}"
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_37aa5742e96a4f61a4485b3a0ab56562
+    authentication:
+      type: bearer
+      token: "{{ _.token }}"
+    metaSortKey: -1615734480634.5
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -281,42 +317,6 @@ resources:
     settingRebuildPath: true
     settingFollowRedirects: global
     _type: request
-  - _id: req_07e0623b670d4a179a7eaed50aabe801
-    parentId: fld_60aa556019ad4b55bba48c9014dd33ac
-    modified: 1617802121779
-    created: 1616346561016
-    url: "{{base_url}}/api/node/upload/parent_id/{% prompt 'Parent Node ID', '', '',
-      '', false, true %}/{% prompt 'Filename', '', '', '', false, true %}"
-    name: Upload By Parent Node ID
-    description: ""
-    method: POST
-    body:
-      mimeType: multipart/form-data
-      params:
-        - name: file
-          value: ""
-          description: ""
-          id: pair_97bf4ee1b278405780c303c2fc4eea1a
-          type: file
-          multiline: null
-          fileName: /home/max/Projects/fc-server/insomnia.yaml
-    parameters: []
-    headers:
-      - name: Content-Type
-        value: multipart/form-data
-        id: pair_3421248ce65241f681eb497ca0297d9c
-    authentication:
-      type: bearer
-      token: "{{token}}"
-    metaSortKey: -1590153453010.625
-    isPrivate: false
-    settingStoreCookies: true
-    settingSendCookies: true
-    settingDisableRenderRequestBody: false
-    settingEncodeUrl: true
-    settingRebuildPath: true
-    settingFollowRedirects: global
-    _type: request
   - _id: req_06d70eeafee94934b101e00961960d4b
     parentId: fld_2c89ec92c0a54a8daf576e22288a7350
     modified: 1617900257783
@@ -362,7 +362,7 @@ resources:
     _type: request_group
   - _id: req_973a176e22564a8aae802142f020d94f
     parentId: fld_cae7105d28324ef68b9902d4360f28b7
-    modified: 1619511808453
+    modified: 1619723666585
     created: 1619160077530
     url: "{{ _.base_url }}/graphql"
     name: Login
@@ -420,6 +420,59 @@ resources:
       type: bearer
       token: "{{ _.token }}"
     metaSortKey: -1614273555870
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_408d1d59221044c1a6b61db7d388ee77
+    parentId: fld_cae7105d28324ef68b9902d4360f28b7
+    modified: 1619116493734
+    created: 1614273555845
+    url: "{{base_url}}/api/auth/login"
+    name: Login
+    description: ""
+    method: POST
+    body:
+      mimeType: application/json
+      text: |-
+        {
+        	"email": "{{ _.userMail2 }}",
+        	"password": "{{ _.userPassword }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_acdd0010db534a6a87921f65d4809635
+    authentication: {}
+    metaSortKey: -1614273555845
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_a8058f3c495d42d38c17787085771f24
+    parentId: fld_cae7105d28324ef68b9902d4360f28b7
+    modified: 1614273710136
+    created: 1614273623750
+    url: "{{base_url}}/api/auth/logout"
+    name: Logout
+    description: ""
+    method: POST
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1603476684538.5
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -519,6 +572,84 @@ resources:
         id: pair_37aa5742e96a4f61a4485b3a0ab56562
     authentication: {}
     metaSortKey: -1618130198676.75
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_d1062ec6f1bb4f079db01aedc5cdb6a8
+    parentId: fld_8952315ac3704cd385cbac89df3182a2
+    modified: 1617899703221
+    created: 1614193498889
+    url: "{{base_url}}/api/user"
+    name: Register New User
+    description: ""
+    method: POST
+    body:
+      mimeType: application/json
+      text: |-
+        {
+        	"first_name": "Tom",
+        	"last_name": "Tester",
+        	"email": "{{ _.userMail2 }}",
+        	"password": "123456"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_586dfdbb28684a13846e955ef2e35530
+    authentication: {}
+    metaSortKey: -1592679813232
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_b93c615d605346ef88e5338633492f58
+    parentId: fld_8952315ac3704cd385cbac89df3182a2
+    modified: 1615734980743
+    created: 1614271661520
+    url: "{{base_url}}/api/user"
+    name: Get Own User
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813207
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+  - _id: req_60f337b245164a19a6de5fe488943cd2
+    parentId: fld_8952315ac3704cd385cbac89df3182a2
+    modified: 1615057149450
+    created: 1592679813182
+    url: "{{base_url}}/api/user/4"
+    name: Get User By ID
+    description: ""
+    method: GET
+    body: {}
+    parameters: []
+    headers: []
+    authentication:
+      type: bearer
+      token: "{{token}}"
+    metaSortKey: -1592679813182
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true

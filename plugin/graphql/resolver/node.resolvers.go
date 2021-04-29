@@ -14,6 +14,29 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func (r *mutationResolver) CreateNode(ctx context.Context, input model.NodeInput) (*model.NodeCreationResult, error) {
+	if input.ParentNodeIdentifier.ID == nil {
+		return nil, fcerror.NewError(fcerror.ErrBadRequest, fmt.Errorf("Node creation via path not yet supported"))
+	}
+
+	authCtx := getAuthContext(ctx)
+	node := &models.Node{
+		ParentNodeID: (*models.NodeID)(input.ParentNodeIdentifier.ID),
+		Name:         input.Name,
+		Type:         input.Type,
+	}
+
+	created, fcerr := r.managers.Node.CreateNode(authCtx, node)
+	if fcerr != nil {
+		return nil, fcerr
+	}
+
+	return &model.NodeCreationResult{
+		Created: created,
+		Node:    node,
+	}, nil
+}
+
 func (r *nodeResolver) ID(ctx context.Context, obj *models.Node) (string, error) {
 	return string(obj.ID), nil
 }
@@ -48,7 +71,7 @@ func (r *nodeResolver) Files(ctx context.Context, obj *models.Node) ([]*models.N
 	return content, nil
 }
 
-func (r *queryResolver) Node(ctx context.Context, input model.GetNodeInput) (*models.Node, error) {
+func (r *queryResolver) Node(ctx context.Context, input model.NodeIdentifierInput) (*models.Node, error) {
 	authCtx := getAuthContext(ctx)
 
 	var node *models.Node

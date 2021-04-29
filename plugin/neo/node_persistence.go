@@ -101,7 +101,9 @@ func (tx *nodeReadTransaction) GetNodeByPath(userID models.UserID, path string, 
 		return
 	}
 
-	return tx.fillNodeInfo(record, userID, path)
+	node = &models.Node{}
+	fcerr = tx.fillNodeInfo(node, record, userID, path)
+	return node, fcerr
 }
 
 func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.NodeID, includedShareMode models.ShareMode) (node *models.Node, fcerr *fcerror.Error) {
@@ -134,7 +136,9 @@ func (tx *nodeReadTransaction) GetNodeByID(userID models.UserID, nodeID models.N
 	}
 	path := pathInt.(string)
 
-	return tx.fillNodeInfo(record, userID, path)
+	node = &models.Node{}
+	fcerr = tx.fillNodeInfo(node, record, userID, path)
+	return node, fcerr
 }
 
 func (tx *nodeReadTransaction) ListByID(userID models.UserID, nodeID models.NodeID, includedShareMode models.ShareMode) (list []*models.Node, fcerr *fcerror.Error) {
@@ -170,7 +174,8 @@ func (tx *nodeReadTransaction) ListByID(userID models.UserID, nodeID models.Node
 		}
 		path := pathInt.(string)
 
-		node, fcerr := tx.fillNodeInfo(record, userID, path)
+		node := &models.Node{}
+		fcerr := tx.fillNodeInfo(node, record, userID, path)
 		if fcerr != nil {
 			fcerr = neoToFcError(err, fcerror.ErrNodeNotFound, fcerror.ErrDBReadFailed)
 			return nil, fcerr
@@ -181,8 +186,7 @@ func (tx *nodeReadTransaction) ListByID(userID models.UserID, nodeID models.Node
 	return
 }
 
-func (tx *nodeReadTransaction) fillNodeInfo(record neo4j.Record, userID models.UserID, path string) (node *models.Node, fcerr *fcerror.Error) {
-	node = &models.Node{}
+func (tx *nodeReadTransaction) fillNodeInfo(node *models.Node, record neo4j.Record, userID models.UserID, path string) (fcerr *fcerror.Error) {
 	fcerr = recordToModel(record, "n", node)
 	if fcerr != nil {
 		return
@@ -287,17 +291,15 @@ func (tx *nodeReadWriteTransaction) CreateUserRootFolder(userID models.UserID) (
 	return
 }
 
-func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeType models.NodeType, parentNodeID models.NodeID, name string) (node *models.Node, created bool, fcerr *fcerror.Error) {
-	insertNode := &models.Node{
-		ID:      models.NodeID(uuid.NewString()),
-		Created: utils.GetCurrentTime(),
-		Updated: utils.GetCurrentTime(),
-	}
+func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, node *models.Node) (created bool, fcerr *fcerror.Error) {
+	node.ID = models.NodeID(uuid.NewString())
+	node.Created = utils.GetCurrentTime()
+	node.Updated = utils.GetCurrentTime()
 	insertRelation := &containsRelation{
-		Name: name,
+		Name: node.Name,
 	}
 	insertNodeType := "File"
-	if nodeType == models.NodeTypeFolder {
+	if node.Type == models.NodeTypeFolder {
 		insertNodeType = "Folder"
 	}
 
@@ -317,8 +319,8 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 		`, insertNodeType),
 		map[string]interface{}{
 			"user_id":        userID,
-			"parent_node_id": parentNodeID,
-			"n":              modelToMap(insertNode),
+			"parent_node_id": node.ParentNodeID,
+			"n":              modelToMap(node),
 			"r":              modelToMap(insertRelation),
 		})
 	record, err := neo4j.Single(result, err)
@@ -341,8 +343,8 @@ func (tx *nodeReadWriteTransaction) CreateNodeByID(userID models.UserID, nodeTyp
 	if path == "" {
 		path = "/"
 	}
-	path = utils.JoinPaths(path, name)
+	path = utils.JoinPaths(path, node.Name)
 
-	node, fcerr = tx.fillNodeInfo(record, userID, path)
+	fcerr = tx.fillNodeInfo(node, record, userID, path)
 	return
 }

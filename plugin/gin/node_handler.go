@@ -26,7 +26,6 @@ func (r *Router) buildNodeRoutes() {
 	grp.GET("content/id/:"+nodeIDParam, r.getNodeContentByID)
 	grp.POST("create/", r.createNodeByID)
 	grp.POST("upload/id/:"+nodeIDParam, r.uploadFileByID)
-	grp.POST("upload/parent_id/:"+nodeIDParam+"/:"+fileNameParam, r.uploadFileByParentID)
 }
 
 func (r *Router) getNodeInfoByPath(c *gin.Context) {
@@ -108,50 +107,13 @@ func (r *Router) createNodeByID(c *gin.Context) {
 		return
 	}
 
-	created, createdNode, fcerr := r.managers.Node.CreateNode(authContext, node)
+	created, fcerr := r.managers.Node.CreateNode(authContext, node)
 	if fcerr != nil {
 		c.JSON(errToStatus(fcerr), fcerr)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"node": createdNode, "created": created})
-}
-
-func (r *Router) uploadFileByParentID(c *gin.Context) {
-	authContext := getAuthContext(c)
-
-	file, err := c.FormFile("file")
-	if err != nil {
-		fcerr := fcerror.NewError(fcerror.ErrBadRequest, err)
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	tmpPath := utils.JoinPaths(r.cfg.GetFileStorageTempBasePath(), utils.GenerateRandomString(10))
-	err = c.SaveUploadedFile(file, tmpPath)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to save upload to temp file")
-		fcerr := fcerror.NewError(fcerror.ErrCopyFileFailed, err)
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	parentNodeID, fcerr := extractNodeID(c)
-	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-	filename := c.Param(fileNameParam)
-
-	node := &models.Node{ParentNodeID: &parentNodeID, Name: filename, Size: file.Size}
-	created, createdNode, fcerr := r.managers.Node.UploadFile(authContext, node, tmpPath)
-	if fcerr != nil {
-		c.JSON(errToStatus(fcerr), fcerr)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"node_id": createdNode.ID, "created": created})
+	c.JSON(http.StatusOK, gin.H{"node": node, "created": created})
 }
 
 func (r *Router) uploadFileByID(c *gin.Context) {

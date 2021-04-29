@@ -2,10 +2,9 @@
 
 package model
 
-type GetNodeInput struct {
-	ID       *string `json:"id"`
-	FullPath *string `json:"full_path"`
-}
+import (
+	"github.com/freecloudio/server/domain/models"
+)
 
 type LoginInput struct {
 	Email    string `json:"email"`
@@ -14,6 +13,22 @@ type LoginInput struct {
 
 type MutationResult struct {
 	Success bool `json:"success"`
+}
+
+type NodeCreationResult struct {
+	Created bool         `json:"created"`
+	Node    *models.Node `json:"node"`
+}
+
+type NodeIdentifierInput struct {
+	ID       *string `json:"id"`
+	FullPath *string `json:"full_path"`
+}
+
+type NodeInput struct {
+	ParentNodeIdentifier *NodeIdentifierInput `json:"parent_node_identifier"`
+	Name                 string               `json:"name"`
+	Type                 models.NodeType      `json:"type"`
 }
 
 type UserInput struct {
