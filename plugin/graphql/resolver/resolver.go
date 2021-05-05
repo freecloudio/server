@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/freecloudio/server/application/authorization"
 	"github.com/freecloudio/server/application/config"
@@ -17,6 +18,10 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 //go:generate go run github.com/99designs/gqlgen
+
+const contextKeyObjectCache = "object_cache"
+
+type contextCache map[string]interface{}
 
 type Resolver struct {
 	cfg      config.Config
@@ -39,6 +44,43 @@ func getAuthContext(ctx context.Context) *authorization.Context {
 		return authorization.NewAnonymous()
 	}
 	return authContext
+}
+
+func ContextCacheMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cache := contextCache{}
+		r = r.WithContext(context.WithValue(r.Context(), contextKeyObjectCache, cache))
+		next.ServeHTTP(w, r)
+	})
+}
+
+func getObjectCache(ctx context.Context) contextCache {
+	cacheInt := ctx.Value(contextKeyObjectCache)
+	if cacheInt == nil {
+		logrus.Warn("Could not get object cache for context")
+		return nil
+	}
+	cache, ok := cacheInt.(contextCache)
+	if !ok {
+		logrus.WithField("cache", cacheInt).Warn("ObjectCache in context is not of correct type")
+	}
+	return cache
+}
+
+func getObjectFromContextCache(ctx context.Context, id string) interface{} {
+	cache := getObjectCache(ctx)
+	if cache == nil {
+		return nil
+	}
+	return cache[id]
+}
+
+func insertObjectIntoContextCache(ctx context.Context, id string, obj interface{}) {
+	cache := getObjectCache(ctx)
+	if cache == nil {
+		return
+	}
+	cache[id] = obj
 }
 
 func isOnlyIDRequested(ctx context.Context) bool {

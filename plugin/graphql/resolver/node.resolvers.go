@@ -11,6 +11,7 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/plugin/graphql/generated"
 	"github.com/freecloudio/server/plugin/graphql/model"
+	"github.com/sirupsen/logrus"
 )
 
 func (r *mutationResolver) CreateNode(ctx context.Context, input model.NodeInput) (*model.NodeCreationResult, error) {
@@ -67,12 +68,25 @@ func (r *nodeResolver) Files(ctx context.Context, obj *models.Node) ([]*models.N
 	if obj.Type != models.NodeTypeFolder {
 		return nil, nil
 	}
-	authCtx := getAuthContext(ctx)
 
+	cacheContentID := "content" + string(obj.ID)
+	contentInt := getObjectFromContextCache(ctx, cacheContentID)
+	if contentInt != nil {
+		logrus.WithField("nodeID", obj.ID).Info("Got node content from context cache")
+		return contentInt.([]*models.Node), nil
+	}
+
+	authCtx := getAuthContext(ctx)
 	content, fcerr := r.managers.Node.ListByID(authCtx, obj.ID)
 	if fcerr != nil {
 		return nil, fcerr
 	}
+
+	for _, node := range content {
+		insertObjectIntoContextCache(ctx, string(node.ID), node)
+	}
+	insertObjectIntoContextCache(ctx, cacheContentID, content)
+
 	return content, nil
 }
 
@@ -82,12 +96,20 @@ func (r *queryResolver) Node(ctx context.Context, input model.NodeIdentifierInpu
 	var node *models.Node
 	var fcerr *fcerror.Error
 	if input.ID != nil {
+		nodeInt := getObjectFromContextCache(ctx, *input.ID)
+		if nodeInt != nil {
+			logrus.WithField("nodeID", *input.ID).Info("Got node from context cache")
+			return nodeInt.(*models.Node), nil
+		}
+
 		node, fcerr = r.managers.Node.GetNodeByID(authCtx, models.NodeID(*input.ID))
 	} else if input.FullPath != nil {
 		node, fcerr = r.managers.Node.GetNodeByPath(authCtx, *input.FullPath)
 	} else {
 		return nil, fcerror.NewError(fcerror.ErrBadRequest, fmt.Errorf("Node ID or FullPath missing"))
 	}
+
+	insertObjectIntoContextCache(ctx, string(node.ID), node)
 
 	if fcerr != nil {
 		return nil, fcerr

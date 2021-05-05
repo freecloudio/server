@@ -10,6 +10,8 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/plugin/graphql/generated"
 	"github.com/freecloudio/server/plugin/graphql/model"
+
+	"github.com/sirupsen/logrus"
 )
 
 func (r *mutationResolver) RegisterUser(ctx context.Context, input model.UserInput) (*models.User, error) {
@@ -40,10 +42,18 @@ func (r *queryResolver) User(ctx context.Context, userID *string) (*models.User,
 	}
 
 	// Get user by ID
+	userInt := getObjectFromContextCache(ctx, *userID)
+	if userInt != nil {
+		logrus.WithField("userID", *userID).Info("Got user from context cache")
+		return userInt.(*models.User), nil
+	}
+
 	user, fcerr := r.managers.User.GetUserByID(authContext, models.UserID(*userID))
 	if fcerr != nil {
 		return nil, fcerr
 	}
+
+	insertObjectIntoContextCache(ctx, *userID, user)
 
 	return user, nil
 }

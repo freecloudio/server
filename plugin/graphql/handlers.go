@@ -23,7 +23,7 @@ func GetGraphQLHandler(cfg config.Config, managers *manager.Managers) http.Handl
 	server.SetErrorPresenter(errorPresenter)
 	server.SetRecoverFunc(recoverFunc)
 
-	return server
+	return resolver.ContextCacheMiddleware(server)
 }
 
 func GetGraphQLPlaygroundHandler(cfg config.Config) http.Handler {
