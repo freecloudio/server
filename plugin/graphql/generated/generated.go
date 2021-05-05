@@ -62,19 +62,19 @@ type ComplexityRoot struct {
 	}
 
 	Node struct {
-		Created      func(childComplexity int) int
-		Files        func(childComplexity int) int
-		FullPath     func(childComplexity int) int
-		ID           func(childComplexity int) int
-		IsStarred    func(childComplexity int) int
-		MimeType     func(childComplexity int) int
-		Name         func(childComplexity int) int
-		OwnerID      func(childComplexity int) int
-		ParentNodeID func(childComplexity int) int
-		Path         func(childComplexity int) int
-		Size         func(childComplexity int) int
-		Type         func(childComplexity int) int
-		Updated      func(childComplexity int) int
+		Created    func(childComplexity int) int
+		Files      func(childComplexity int) int
+		FullPath   func(childComplexity int) int
+		ID         func(childComplexity int) int
+		IsStarred  func(childComplexity int) int
+		MimeType   func(childComplexity int) int
+		Name       func(childComplexity int) int
+		Owner      func(childComplexity int) int
+		ParentNode func(childComplexity int) int
+		Path       func(childComplexity int) int
+		Size       func(childComplexity int) int
+		Type       func(childComplexity int) int
+		Updated    func(childComplexity int) int
 	}
 
 	NodeCreationResult struct {
@@ -95,7 +95,7 @@ type ComplexityRoot struct {
 
 	Session struct {
 		Token      func(childComplexity int) int
-		UserID     func(childComplexity int) int
+		User       func(childComplexity int) int
 		ValidUntil func(childComplexity int) int
 	}
 
@@ -129,8 +129,8 @@ type NodeResolver interface {
 
 	MimeType(ctx context.Context, obj *models.Node) (string, error)
 
-	OwnerID(ctx context.Context, obj *models.Node) (string, error)
-	ParentNodeID(ctx context.Context, obj *models.Node) (*string, error)
+	Owner(ctx context.Context, obj *models.Node) (*models.User, error)
+	ParentNode(ctx context.Context, obj *models.Node) (*models.Node, error)
 
 	Files(ctx context.Context, obj *models.Node) ([]*models.Node, error)
 }
@@ -141,7 +141,7 @@ type QueryResolver interface {
 }
 type SessionResolver interface {
 	Token(ctx context.Context, obj *models.Session) (string, error)
-	UserID(ctx context.Context, obj *models.Session) (string, error)
+	User(ctx context.Context, obj *models.Session) (*models.User, error)
 }
 type ShareResolver interface {
 	Node(ctx context.Context, obj *models.Share) (*models.Node, error)
@@ -277,19 +277,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Node.Name(childComplexity), true
 
-	case "Node.owner_id":
-		if e.complexity.Node.OwnerID == nil {
+	case "Node.owner":
+		if e.complexity.Node.Owner == nil {
 			break
 		}
 
-		return e.complexity.Node.OwnerID(childComplexity), true
+		return e.complexity.Node.Owner(childComplexity), true
 
-	case "Node.parent_node_id":
-		if e.complexity.Node.ParentNodeID == nil {
+	case "Node.parent_node":
+		if e.complexity.Node.ParentNode == nil {
 			break
 		}
 
-		return e.complexity.Node.ParentNodeID(childComplexity), true
+		return e.complexity.Node.ParentNode(childComplexity), true
 
 	case "Node.path":
 		if e.complexity.Node.Path == nil {
@@ -385,12 +385,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Session.Token(childComplexity), true
 
-	case "Session.user_id":
-		if e.complexity.Session.UserID == nil {
+	case "Session.user":
+		if e.complexity.Session.User == nil {
 			break
 		}
 
-		return e.complexity.Session.UserID(childComplexity), true
+		return e.complexity.Session.User(childComplexity), true
 
 	case "Session.valid_until":
 		if e.complexity.Session.ValidUntil == nil {
@@ -542,7 +542,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "schema/auth.graphqls", Input: `type Session {
 	token: String!
-	user_id: ID!
+	user: User!
 	valid_until: Time!
 }
 
@@ -574,8 +574,8 @@ type Mutation`, BuiltIn: false},
 	size: Int!
 	mime_type: String!
 	name: String!
-	owner_id: ID!
-	parent_node_id: ID
+	owner: User!
+	parent_node: Node
 	type: NodeType!
 	is_starred: Boolean!
 	path: String!
@@ -1256,7 +1256,7 @@ func (ec *executionContext) _Node_name(ctx context.Context, field graphql.Collec
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Node_owner_id(ctx context.Context, field graphql.CollectedField, obj *models.Node) (ret graphql.Marshaler) {
+func (ec *executionContext) _Node_owner(ctx context.Context, field graphql.CollectedField, obj *models.Node) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1274,7 +1274,7 @@ func (ec *executionContext) _Node_owner_id(ctx context.Context, field graphql.Co
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Node().OwnerID(rctx, obj)
+		return ec.resolvers.Node().Owner(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1286,12 +1286,12 @@ func (ec *executionContext) _Node_owner_id(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*models.User)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐUser(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Node_parent_node_id(ctx context.Context, field graphql.CollectedField, obj *models.Node) (ret graphql.Marshaler) {
+func (ec *executionContext) _Node_parent_node(ctx context.Context, field graphql.CollectedField, obj *models.Node) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1309,7 +1309,7 @@ func (ec *executionContext) _Node_parent_node_id(ctx context.Context, field grap
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Node().ParentNodeID(rctx, obj)
+		return ec.resolvers.Node().ParentNode(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1318,9 +1318,9 @@ func (ec *executionContext) _Node_parent_node_id(ctx context.Context, field grap
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*models.Node)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalONode2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNode(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Node_type(ctx context.Context, field graphql.CollectedField, obj *models.Node) (ret graphql.Marshaler) {
@@ -1860,7 +1860,7 @@ func (ec *executionContext) _Session_token(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Session_user_id(ctx context.Context, field graphql.CollectedField, obj *models.Session) (ret graphql.Marshaler) {
+func (ec *executionContext) _Session_user(ctx context.Context, field graphql.CollectedField, obj *models.Session) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1878,7 +1878,7 @@ func (ec *executionContext) _Session_user_id(ctx context.Context, field graphql.
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Session().UserID(rctx, obj)
+		return ec.resolvers.Session().User(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1890,9 +1890,9 @@ func (ec *executionContext) _Session_user_id(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*models.User)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Session_valid_until(ctx context.Context, field graphql.CollectedField, obj *models.Session) (ret graphql.Marshaler) {
@@ -3713,7 +3713,7 @@ func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "owner_id":
+		case "owner":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -3721,13 +3721,13 @@ func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Node_owner_id(ctx, field, obj)
+				res = ec._Node_owner(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
 				return res
 			})
-		case "parent_node_id":
+		case "parent_node":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -3735,7 +3735,7 @@ func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Node_parent_node_id(ctx, field, obj)
+				res = ec._Node_parent_node(ctx, field, obj)
 				return res
 			})
 		case "type":
@@ -3941,7 +3941,7 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 				}
 				return res
 			})
-		case "user_id":
+		case "user":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -3949,7 +3949,7 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Session_user_id(ctx, field, obj)
+				res = ec._Session_user(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -4872,6 +4872,13 @@ func (ec *executionContext) marshalONode2ᚕᚖgithubᚗcomᚋfreecloudioᚋserv
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalONode2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐNode(ctx context.Context, sel ast.SelectionSet, v *models.Node) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Node(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSession2ᚖgithubᚗcomᚋfreecloudioᚋserverᚋdomainᚋmodelsᚐSession(ctx context.Context, sel ast.SelectionSet, v *models.Session) graphql.Marshaler {

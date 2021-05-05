@@ -30,11 +30,17 @@ func (r *mutationResolver) ShareNode(ctx context.Context, input model.ShareInput
 }
 
 func (r *shareResolver) Node(ctx context.Context, obj *models.Share) (*models.Node, error) {
+	if isOnlyIDRequested(ctx) {
+		return &models.Node{ID: obj.NodeID}, nil
+	}
 	queryResolv := &queryResolver{r.Resolver}
 	return queryResolv.Node(ctx, model.NodeIdentifierInput{ID: (*string)(&obj.NodeID)})
 }
 
 func (r *shareResolver) SharedWith(ctx context.Context, obj *models.Share) (*models.User, error) {
+	if isOnlyIDRequested(ctx) {
+		return &models.User{ID: obj.SharedWithID}, nil
+	}
 	queryResolv := &queryResolver{r.Resolver}
 	return queryResolv.User(ctx, (*string)(&obj.SharedWithID))
 }

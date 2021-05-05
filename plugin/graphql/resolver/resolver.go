@@ -7,6 +7,8 @@ import (
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/plugin/gin/keys"
+
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,4 +39,9 @@ func getAuthContext(ctx context.Context) *authorization.Context {
 		return authorization.NewAnonymous()
 	}
 	return authContext
+}
+
+func isOnlyIDRequested(ctx context.Context) bool {
+	fields := graphql.CollectAllFields(ctx)
+	return len(fields) == 1 && fields[0] == "id"
 }

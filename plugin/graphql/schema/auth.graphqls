@@ -1,6 +1,6 @@
 type Session {
 	token: String!
-	user_id: ID!
+	user: User!
 	valid_until: Time!
 }
 

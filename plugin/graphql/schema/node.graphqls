@@ -6,8 +6,8 @@ type Node {
 	size: Int!
 	mime_type: String!
 	name: String!
-	owner_id: ID!
-	parent_node_id: ID
+	owner: User!
+	parent_node: Node
 	type: NodeType!
 	is_starred: Boolean!
 	path: String!

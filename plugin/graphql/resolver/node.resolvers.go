@@ -11,7 +11,6 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/plugin/graphql/generated"
 	"github.com/freecloudio/server/plugin/graphql/model"
-	"github.com/sirupsen/logrus"
 )
 
 func (r *mutationResolver) CreateNode(ctx context.Context, input model.NodeInput) (*model.NodeCreationResult, error) {
@@ -45,20 +44,26 @@ func (r *nodeResolver) MimeType(ctx context.Context, obj *models.Node) (string, 
 	return string(obj.MimeType), nil
 }
 
-func (r *nodeResolver) OwnerID(ctx context.Context, obj *models.Node) (string, error) {
-	return string(obj.OwnerID), nil
+func (r *nodeResolver) Owner(ctx context.Context, obj *models.Node) (*models.User, error) {
+	if isOnlyIDRequested(ctx) {
+		return &models.User{ID: obj.OwnerID}, nil
+	}
+	queryResolv := &queryResolver{r.Resolver}
+	return queryResolv.User(ctx, (*string)(&obj.OwnerID))
 }
 
-func (r *nodeResolver) ParentNodeID(ctx context.Context, obj *models.Node) (*string, error) {
-	if obj.ParentNodeID != nil {
-		str := string(*obj.ParentNodeID)
-		return &str, nil
+func (r *nodeResolver) ParentNode(ctx context.Context, obj *models.Node) (*models.Node, error) {
+	if obj.ParentNodeID == nil {
+		return nil, nil
 	}
-	return nil, nil
+	if isOnlyIDRequested(ctx) {
+		return &models.Node{ID: *obj.ParentNodeID}, nil
+	}
+	queryResolv := &queryResolver{r.Resolver}
+	return queryResolv.Node(ctx, model.NodeIdentifierInput{ID: (*string)(obj.ParentNodeID)})
 }
 
 func (r *nodeResolver) Files(ctx context.Context, obj *models.Node) ([]*models.Node, error) {
-	logrus.WithField("obj", obj).Warn("Files resolver called")
 	if obj.Type != models.NodeTypeFolder {
 		return nil, nil
 	}

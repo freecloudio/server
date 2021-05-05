@@ -43,8 +43,12 @@ func (r *sessionResolver) Token(ctx context.Context, obj *models.Session) (strin
 	return string(obj.Token), nil
 }
 
-func (r *sessionResolver) UserID(ctx context.Context, obj *models.Session) (string, error) {
-	return string(obj.UserID), nil
+func (r *sessionResolver) User(ctx context.Context, obj *models.Session) (*models.User, error) {
+	if isOnlyIDRequested(ctx) {
+		return &models.User{ID: obj.UserID}, nil
+	}
+	queryResolv := &queryResolver{r.Resolver}
+	return queryResolv.User(ctx, (*string)(&obj.UserID))
 }
 
 // Session returns generated.SessionResolver implementation.
