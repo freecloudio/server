@@ -10,9 +10,10 @@ import (
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
+	"github.com/sirupsen/logrus"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
-	"github.com/sirupsen/logrus"
 )
 
 var neo neo4j.Driver
@@ -33,6 +34,7 @@ const (
 )
 
 func initializeNeo(cfg config.Config) (fcerr *fcerror.Error) {
+	logger := utils.CreateLogger(cfg.GetLoggingConfig())
 	driver, err := neo4j.NewDriver(cfg.GetDBConnectionString(), neo4j.BasicAuth(cfg.GetDBUsername(), cfg.GetDBPassword(), ""), setConfig)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBInitializationFailed, err)
@@ -46,9 +48,9 @@ func initializeNeo(cfg config.Config) (fcerr *fcerror.Error) {
 
 	neo = driver
 
-	fcerr = initializeConstraintsAndIndexes()
+	fcerr = initializeConstraintsAndIndexes(logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to initialize neo constraints")
+		logger.WithError(fcerr).Error("Failed to initialize neo constraints")
 		return
 	}
 
@@ -72,13 +74,14 @@ func setConfig(config *neo4j.Config) {
 type transactionCtx struct {
 	session neo4j.Session
 	neoTx   neo4j.Transaction
+	logger  utils.Logger
 }
 
 func (trCtx *transactionCtx) Close() (fcerr *fcerror.Error) {
 	err := trCtx.session.Close()
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBCloseSessionFailed, err)
-		logrus.WithError(fcerr).Error("Failed to close neo4j session")
+		trCtx.logger.WithError(fcerr).Error("Failed to close neo4j session")
 		return
 	}
 	return
@@ -97,12 +100,12 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 	var err error
 	txErr := trCtx.neoTx.Commit()
 	if txErr != nil {
-		logrus.WithError(txErr).Error("Failed to commit neo transaction - close session anyway")
+		trCtx.logger.WithError(txErr).Error("Failed to commit neo transaction - close session anyway")
 		err = txErr
 	}
 	sessErr := trCtx.session.Close()
 	if sessErr != nil {
-		logrus.WithError(sessErr).Error("Failed to close neo4j session")
+		trCtx.logger.WithError(sessErr).Error("Failed to close neo4j session")
 		if err == nil {
 			err = sessErr
 		}
@@ -117,15 +120,15 @@ func (trCtx *transactionCtx) Commit() *fcerror.Error {
 func (trCtx *transactionCtx) Rollback() {
 	err := trCtx.neoTx.Rollback()
 	if err != nil {
-		logrus.WithError(err).Error("Failed to rollback neo transaction - close session anyway")
+		trCtx.logger.WithError(err).Error("Failed to rollback neo transaction - close session anyway")
 	}
 	err = trCtx.session.Close()
 	if err != nil {
-		logrus.WithError(err).Error("Failed to close neo session")
+		trCtx.logger.WithError(err).Error("Failed to close neo session")
 	}
 }
 
-func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, fcerr *fcerror.Error) {
+func newTransactionContext(accessMode neo4j.AccessMode, logger utils.Logger) (txCtx *transactionCtx, fcerr *fcerror.Error) {
 	session, err := neo.Session(accessMode)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrDBTransactionCreationFailed, err)
@@ -137,7 +140,7 @@ func newTransactionContext(accessMode neo4j.AccessMode) (txCtx *transactionCtx, 
 		session.Close()
 		return
 	}
-	txCtx = &transactionCtx{session, neoTx}
+	txCtx = &transactionCtx{session, neoTx, logger}
 	return
 }
 
@@ -150,13 +153,13 @@ type labelModelMapping struct {
 // List of labels mapped to models filled in 'init' functions of each repository
 var labelModelMappings []*labelModelMapping
 
-func initializeConstraintsAndIndexes() (fcerr *fcerror.Error) {
-	neoEdition, fcerr := fetchNeoEdition()
+func initializeConstraintsAndIndexes(logger utils.Logger) (fcerr *fcerror.Error) {
+	neoEdition, fcerr := fetchNeoEdition(logger)
 	if fcerr != nil {
 		return
 	}
 
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite, logger)
 	if fcerr != nil {
 		return
 	}
@@ -206,7 +209,7 @@ func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, proper
 		query = "CREATE INDEX %s IF NOT EXISTS FOR (n:%s) ON (n.%s)"
 		variantName = "index"
 	default:
-		logrus.WithField("variant", variant).Error("Unknown neo config variant")
+		txCtx.logger.WithField("variant", variant).Error("Unknown neo config variant")
 		return
 	}
 
@@ -216,12 +219,12 @@ func insertConfig(txCtx *transactionCtx, variant NeoConfigVariant, label, proper
 		_, err = res.Consume()
 	}
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"variant": variantName, "label": label, "property": property}).Error("Failed to create constraint")
+		txCtx.logger.WithError(err).WithFields(logrus.Fields{"variant": variantName, "label": label, "property": property}).Error("Failed to create constraint")
 	}
 }
 
-func fetchNeoEdition() (neoEdition NeoEdition, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
+func fetchNeoEdition(logger utils.Logger) (neoEdition NeoEdition, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead, logger)
 	if fcerr != nil {
 		return
 	}

@@ -10,14 +10,15 @@ import (
 	"github.com/freecloudio/server/utils"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "Session", model: &models.Session{}})
 }
 
-type AuthPersistence struct{}
+type AuthPersistence struct {
+	logger utils.Logger
+}
 
 func CreateAuthPersistence(cfg config.Config) (authPersistence *AuthPersistence, fcerr *fcerror.Error) {
 	if neo == nil {
@@ -26,7 +27,7 @@ func CreateAuthPersistence(cfg config.Config) (authPersistence *AuthPersistence,
 			return
 		}
 	}
-	authPersistence = &AuthPersistence{}
+	authPersistence = &AuthPersistence{logger: utils.CreateLogger(cfg.GetLoggingConfig())}
 	return
 }
 
@@ -37,19 +38,19 @@ func (*AuthPersistence) Close() *fcerror.Error {
 	return nil
 }
 
-func (*AuthPersistence) StartReadTransaction() (tx persistence.AuthPersistenceReadTransaction, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
+func (p *AuthPersistence) StartReadTransaction() (tx persistence.AuthPersistenceReadTransaction, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead, p.logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create neo read transaction")
+		p.logger.WithError(fcerr).Error("Failed to create neo read transaction")
 		return
 	}
 	return &authReadTransaction{txCtx}, nil
 }
 
-func (*AuthPersistence) StartReadWriteTransaction() (tx persistence.AuthPersistenceReadWriteTransaction, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
+func (p *AuthPersistence) StartReadWriteTransaction() (tx persistence.AuthPersistenceReadWriteTransaction, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite, p.logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create neo write transaction")
+		p.logger.WithError(fcerr).Error("Failed to create neo write transaction")
 		return
 	}
 	return &authReadWriteTransaction{authReadTransaction{txCtx}}, nil

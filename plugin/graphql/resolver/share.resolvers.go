@@ -12,7 +12,7 @@ import (
 )
 
 func (r *mutationResolver) ShareNode(ctx context.Context, input model.ShareInput) (*model.NodeShareResult, error) {
-	authCtx := getAuthContext(ctx)
+	authCtx := r.getAuthContext(ctx)
 	share := &models.Share{
 		NodeID:       models.NodeID(input.NodeID),
 		SharedWithID: models.UserID(input.SharedWithID),
@@ -30,7 +30,7 @@ func (r *mutationResolver) ShareNode(ctx context.Context, input model.ShareInput
 }
 
 func (r *shareResolver) Node(ctx context.Context, obj *models.Share) (*models.Node, error) {
-	if isOnlyIDRequested(ctx) {
+	if r.isOnlyIDRequested(ctx) {
 		return &models.Node{ID: obj.NodeID}, nil
 	}
 	queryResolv := &queryResolver{r.Resolver}
@@ -38,7 +38,7 @@ func (r *shareResolver) Node(ctx context.Context, obj *models.Share) (*models.No
 }
 
 func (r *shareResolver) SharedWith(ctx context.Context, obj *models.Share) (*models.User, error) {
-	if isOnlyIDRequested(ctx) {
+	if r.isOnlyIDRequested(ctx) {
 		return &models.User{ID: obj.SharedWithID}, nil
 	}
 	queryResolv := &queryResolver{r.Resolver}

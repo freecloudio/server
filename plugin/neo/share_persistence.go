@@ -5,11 +5,14 @@ import (
 	"github.com/freecloudio/server/application/persistence"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
+
 	"github.com/neo4j/neo4j-go-driver/neo4j"
-	"github.com/sirupsen/logrus"
 )
 
-type SharePersistence struct{}
+type SharePersistence struct {
+	logger utils.Logger
+}
 
 func init() {
 	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "CONTAINS_SHARED", model: &containsRelation{}})
@@ -23,7 +26,7 @@ func CreateSharePersistence(cfg config.Config) (sharePersistence *SharePersisten
 			return
 		}
 	}
-	sharePersistence = &SharePersistence{}
+	sharePersistence = &SharePersistence{logger: utils.CreateLogger(cfg.GetLoggingConfig())}
 	return
 }
 
@@ -34,19 +37,19 @@ func (*SharePersistence) Close() *fcerror.Error {
 	return nil
 }
 
-func (*SharePersistence) StartReadTransaction() (tx persistence.SharePersistenceReadTransaction, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
+func (p *SharePersistence) StartReadTransaction() (tx persistence.SharePersistenceReadTransaction, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead, p.logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create neo read transaction")
+		p.logger.WithError(fcerr).Error("Failed to create neo read transaction")
 		return
 	}
 	return &shareReadTransaction{txCtx}, nil
 }
 
-func (*SharePersistence) StartReadWriteTransaction() (tx persistence.SharePersistenceReadWriteTransaction, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
+func (p *SharePersistence) StartReadWriteTransaction() (tx persistence.SharePersistenceReadWriteTransaction, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite, p.logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create neo write transaction")
+		p.logger.WithError(fcerr).Error("Failed to create neo write transaction")
 		return
 	}
 	return &shareReadWriteTransaction{shareReadTransaction{txCtx}}, nil

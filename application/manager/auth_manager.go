@@ -9,8 +9,6 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
-
-	"github.com/sirupsen/logrus"
 )
 
 // AuthManager contains all use cases related to authentication and user management
@@ -28,6 +26,7 @@ func NewAuthManager(cfg config.Config, authPersistence persistence.AuthPersisten
 		authPersistence: authPersistence,
 		managers:        managers,
 		done:            make(chan struct{}),
+		logger:          utils.CreateLogger(cfg.GetLoggingConfig()),
 	}
 	go authMgr.cleanupExpiredSessionsRoutine()
 
@@ -40,6 +39,7 @@ type authManager struct {
 	authPersistence persistence.AuthPersistenceController
 	managers        *Managers
 	done            chan struct{}
+	logger          utils.Logger
 }
 
 func (mgr *authManager) Close() {
@@ -48,7 +48,7 @@ func (mgr *authManager) Close() {
 
 func (mgr *authManager) cleanupExpiredSessionsRoutine() {
 	interval := mgr.cfg.GetSessionCleanupInterval()
-	logrus.WithField("interval", interval).Trace("Starting session cleanup")
+	mgr.logger.WithField("interval", interval).Debug("Starting session cleanup")
 
 	mgr.cleanupExpiredSessions()
 	ticker := time.NewTicker(interval)
@@ -63,18 +63,18 @@ func (mgr *authManager) cleanupExpiredSessionsRoutine() {
 }
 
 func (mgr *authManager) cleanupExpiredSessions() {
-	logrus.Trace("Cleaning expired sessions")
+	mgr.logger.Debug("Cleaning expired sessions")
 
 	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer func() { _ = trans.Finish(fcerr) }()
 
 	fcerr = trans.DeleteExpiredSessions()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to delete expired sessions")
+		mgr.logger.WithError(fcerr).Error("Failed to delete expired sessions")
 		return
 	}
 }
@@ -82,14 +82,14 @@ func (mgr *authManager) cleanupExpiredSessions() {
 func (mgr *authManager) Login(email, password string) (token *models.Session, fcerr *fcerror.Error) {
 	user, fcerr := mgr.managers.User.GetUserByEmail(authorization.NewSystem(), email)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
+		mgr.logger.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
 		return
 	}
 
 	err := utils.ValidateScryptPassword(password, user.Password)
 	if err != nil {
-		logrus.WithError(err).WithField("email", email).Warn("Failed to validate password")
+		mgr.logger.WithError(err).WithField("email", email).Warn("Failed to validate password")
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
 		return
 	}
@@ -100,14 +100,14 @@ func (mgr *authManager) Login(email, password string) (token *models.Session, fc
 func (mgr *authManager) Logout(token models.Token) (fcerr *fcerror.Error) {
 	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
 	fcerr = trans.DeleteSessionByToken(token)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to delete token")
+		mgr.logger.WithError(fcerr).Error("Failed to delete token")
 		return
 	}
 
@@ -117,14 +117,14 @@ func (mgr *authManager) Logout(token models.Token) (fcerr *fcerror.Error) {
 func (mgr *authManager) VerifyToken(token models.Token) (user *models.User, fcerr *fcerror.Error) {
 	authTrans, fcerr := mgr.authPersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer authTrans.Close()
 
 	session, fcerr := authTrans.GetSessionByToken(token)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Token not found or failed to verify")
+		mgr.logger.WithError(fcerr).Error("Token not found or failed to verify")
 		return
 	}
 
@@ -145,14 +145,14 @@ func (mgr *authManager) CreateNewSession(userID models.UserID) (session *models.
 
 	trans, fcerr := mgr.authPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
 	fcerr = trans.SaveSession(session)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to save user")
+		mgr.logger.WithError(fcerr).Error("Failed to save user")
 		return
 	}
 	return session, nil

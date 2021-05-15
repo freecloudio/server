@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
-	"github.com/sirupsen/logrus"
 )
 
 // TODO: Deduplicate Cypher statements
@@ -35,7 +34,9 @@ func init() {
 	labelModelMappings = append(labelModelMappings, &labelModelMapping{label: "CONTAINS", model: &containsRelation{}})
 }
 
-type NodePersistence struct{}
+type NodePersistence struct {
+	logger utils.Logger
+}
 
 func CreateNodePersistence(cfg config.Config) (nodePersistence *NodePersistence, fcerr *fcerror.Error) {
 	if neo == nil {
@@ -44,7 +45,7 @@ func CreateNodePersistence(cfg config.Config) (nodePersistence *NodePersistence,
 			return
 		}
 	}
-	nodePersistence = &NodePersistence{}
+	nodePersistence = &NodePersistence{logger: utils.CreateLogger(cfg.GetLoggingConfig())}
 	return
 }
 
@@ -55,19 +56,19 @@ func (*NodePersistence) Close() *fcerror.Error {
 	return nil
 }
 
-func (*NodePersistence) StartReadTransaction() (tx persistence.NodePersistenceReadTransaction, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead)
+func (p *NodePersistence) StartReadTransaction() (tx persistence.NodePersistenceReadTransaction, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeRead, p.logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create neo read transaction")
+		p.logger.WithError(fcerr).Error("Failed to create neo read transaction")
 		return
 	}
 	return &nodeReadTransaction{txCtx}, nil
 }
 
-func (*NodePersistence) StartReadWriteTransaction() (tx persistence.NodePersistenceReadWriteTransaction, fcerr *fcerror.Error) {
-	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite)
+func (p *NodePersistence) StartReadWriteTransaction() (tx persistence.NodePersistenceReadWriteTransaction, fcerr *fcerror.Error) {
+	txCtx, fcerr := newTransactionContext(neo4j.AccessModeWrite, p.logger)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create neo write transaction")
+		p.logger.WithError(fcerr).Error("Failed to create neo write transaction")
 		return
 	}
 	return &nodeReadWriteTransaction{nodeReadTransaction{txCtx}}, nil

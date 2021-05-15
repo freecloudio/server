@@ -11,7 +11,6 @@ import (
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/plugin/graphql/generated"
 	"github.com/freecloudio/server/plugin/graphql/model"
-	"github.com/sirupsen/logrus"
 )
 
 func (r *mutationResolver) CreateNode(ctx context.Context, input model.NodeInput) (*model.NodeCreationResult, error) {
@@ -19,7 +18,7 @@ func (r *mutationResolver) CreateNode(ctx context.Context, input model.NodeInput
 		return nil, fcerror.NewError(fcerror.ErrBadRequest, fmt.Errorf("Node creation via path not yet supported"))
 	}
 
-	authCtx := getAuthContext(ctx)
+	authCtx := r.getAuthContext(ctx)
 	node := &models.Node{
 		ParentNodeID: (*models.NodeID)(input.ParentNodeIdentifier.ID),
 		Name:         input.Name,
@@ -46,7 +45,7 @@ func (r *nodeResolver) MimeType(ctx context.Context, obj *models.Node) (string, 
 }
 
 func (r *nodeResolver) Owner(ctx context.Context, obj *models.Node) (*models.User, error) {
-	if isOnlyIDRequested(ctx) {
+	if r.isOnlyIDRequested(ctx) {
 		return &models.User{ID: obj.OwnerID}, nil
 	}
 	queryResolv := &queryResolver{r.Resolver}
@@ -57,7 +56,7 @@ func (r *nodeResolver) ParentNode(ctx context.Context, obj *models.Node) (*model
 	if obj.ParentNodeID == nil {
 		return nil, nil
 	}
-	if isOnlyIDRequested(ctx) {
+	if r.isOnlyIDRequested(ctx) {
 		return &models.Node{ID: *obj.ParentNodeID}, nil
 	}
 	queryResolv := &queryResolver{r.Resolver}
@@ -70,35 +69,35 @@ func (r *nodeResolver) Files(ctx context.Context, obj *models.Node) ([]*models.N
 	}
 
 	cacheContentID := "content" + string(obj.ID)
-	contentInt := getObjectFromContextCache(ctx, cacheContentID)
+	contentInt := r.getObjectFromContextCache(ctx, cacheContentID)
 	if contentInt != nil {
-		logrus.WithField("nodeID", obj.ID).Info("Got node content from context cache")
+		r.logger.WithField("nodeID", obj.ID).Info("Got node content from context cache")
 		return contentInt.([]*models.Node), nil
 	}
 
-	authCtx := getAuthContext(ctx)
+	authCtx := r.getAuthContext(ctx)
 	content, fcerr := r.managers.Node.ListByID(authCtx, obj.ID)
 	if fcerr != nil {
 		return nil, fcerr
 	}
 
 	for _, node := range content {
-		insertObjectIntoContextCache(ctx, string(node.ID), node)
+		r.insertObjectIntoContextCache(ctx, string(node.ID), node)
 	}
-	insertObjectIntoContextCache(ctx, cacheContentID, content)
+	r.insertObjectIntoContextCache(ctx, cacheContentID, content)
 
 	return content, nil
 }
 
 func (r *queryResolver) Node(ctx context.Context, input model.NodeIdentifierInput) (*models.Node, error) {
-	authCtx := getAuthContext(ctx)
+	authCtx := r.getAuthContext(ctx)
 
 	var node *models.Node
 	var fcerr *fcerror.Error
 	if input.ID != nil {
-		nodeInt := getObjectFromContextCache(ctx, *input.ID)
+		nodeInt := r.getObjectFromContextCache(ctx, *input.ID)
 		if nodeInt != nil {
-			logrus.WithField("nodeID", *input.ID).Info("Got node from context cache")
+			r.logger.WithField("nodeID", *input.ID).Info("Got node from context cache")
 			return nodeInt.(*models.Node), nil
 		}
 
@@ -109,7 +108,7 @@ func (r *queryResolver) Node(ctx context.Context, input model.NodeIdentifierInpu
 		return nil, fcerror.NewError(fcerror.ErrBadRequest, fmt.Errorf("Node ID or FullPath missing"))
 	}
 
-	insertObjectIntoContextCache(ctx, string(node.ID), node)
+	r.insertObjectIntoContextCache(ctx, string(node.ID), node)
 
 	if fcerr != nil {
 		return nil, fcerr

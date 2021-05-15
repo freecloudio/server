@@ -4,7 +4,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/freecloudio/server/application/config"
+	"github.com/freecloudio/server/utils"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -20,13 +22,20 @@ const (
 
 	keyFileStorageTempBasePath    = "storage.temp.basepath"
 	keyFileStorageLocalFSBasePath = "storage.file.localfs.basepath"
+
+	keyLogFormatter = "log.formatter"
+	keyLogLevel     = "log.level"
 )
 
 type ViperConfig struct {
 	viper *viper.Viper
 }
 
+var _ config.Config = &ViperConfig{}
+
 func InitViperConfig() *ViperConfig {
+	logger := utils.CreateLogger(&utils.LoggingConfig{Level: utils.TraceLevel, ReportCaller: true})
+
 	v := viper.New()
 	p := pflag.NewFlagSet("freecloud-server", pflag.ExitOnError)
 
@@ -41,6 +50,9 @@ func InitViperConfig() *ViperConfig {
 	p.String(keyFileStorageTempBasePath, "tmp", "Base path of folder for temporary files")
 	p.String(keyFileStorageLocalFSBasePath, "data", "Base path of the local filesystem file storage")
 
+	p.String(keyLogFormatter, "terminal", "Format of the logs; Either terminal, json or text")
+	p.String(keyLogLevel, "trace", "Minimum level to be logged; Either panic, fatal, error, warn, info, debug or trace")
+
 	p.Parse(os.Args[1:])
 	v.BindPFlags(p)
 	v.SetConfigName("config")
@@ -50,7 +62,7 @@ func InitViperConfig() *ViperConfig {
 	if err := viper.ReadInConfig(); err != nil {
 		// Error is not a file not found error
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			logrus.WithError(err).Fatal("Failed to read config file")
+			logger.WithError(err).Fatal("Failed to read config file")
 		}
 	}
 
@@ -87,4 +99,12 @@ func (cfg *ViperConfig) GetFileStorageTempBasePath() string {
 
 func (cfg *ViperConfig) GetFileStorageLocalFSBasePath() string {
 	return cfg.viper.GetString(keyFileStorageLocalFSBasePath)
+}
+
+func (cfg *ViperConfig) GetLoggingConfig() *utils.LoggingConfig {
+	return &utils.LoggingConfig{
+		Formatter:    utils.LogFormatter(cfg.viper.GetString(keyLogFormatter)),
+		Level:        utils.LogLevel(cfg.viper.GetString(keyLogLevel)),
+		ReportCaller: true,
+	}
 }

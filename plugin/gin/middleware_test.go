@@ -8,6 +8,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
@@ -17,16 +18,17 @@ import (
 
 func TestGetAuthContext(t *testing.T) {
 	c := &gin.Context{}
+	logger := logrus.New()
 
-	authContext := getAuthContext(c)
-	assert.Equal(t, authorization.ContextTypeAnonymous, authContext.Type, "No auth context does not return anonymous")
+	authContext := getAuthContext(c, logger)
+	assert.Equal(t, authorization.ContextTypeAnonymous, authContext.Type, "No auth context does return anonymous")
 
 	c.Set(authContextKey, "not a auth context")
-	authContext = getAuthContext(c)
-	assert.Equal(t, authorization.ContextTypeAnonymous, authContext.Type, "Wrong context type does not return anonymous")
+	authContext = getAuthContext(c, logger)
+	assert.Equal(t, authorization.ContextTypeAnonymous, authContext.Type, "Wrong context type does return anonymous")
 
 	c.Set(authContextKey, authorization.NewSystem())
-	authContext = getAuthContext(c)
+	authContext = getAuthContext(c, logger)
 	assert.Equal(t, authorization.ContextTypeSystem, authContext.Type, "Wrong context type")
 }
 
@@ -69,10 +71,11 @@ func TestAuthMiddleware(t *testing.T) {
 			require.Nil(t, err, "Failed to create request")
 			req.Header.Add("Authorization", test.input)
 			c.Request = req
+			logger := logrus.New()
 
 			authMiddleware(c)
 
-			authContext := getAuthContext(c)
+			authContext := getAuthContext(c, logger)
 			assert.Equal(t, test.expectedAuthType, authContext.Type, "Wrong context type")
 			if authContext.Type == authorization.ContextTypeUser {
 				tokenInt, ok := c.Get(authTokenKey)

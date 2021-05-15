@@ -25,6 +25,7 @@ func NewUserManager(cfg config.Config, userPersistence persistence.UserPersisten
 		cfg:             cfg,
 		userPersistence: userPersistence,
 		managers:        managers,
+		logger:          utils.CreateLogger(cfg.GetLoggingConfig()),
 	}
 
 	managers.User = userMgr
@@ -35,6 +36,7 @@ type userManager struct {
 	cfg             config.Config
 	userPersistence persistence.UserPersistenceController
 	managers        *Managers
+	logger          utils.Logger
 }
 
 var _ UserManager = &userManager{}
@@ -47,13 +49,13 @@ func (mgr *userManager) CreateUser(user *models.User) (session *models.Session, 
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 
 	existingUser, fcerr := trans.GetUserByEmail(user.Email)
 	if fcerr != nil && fcerr.ID != fcerror.ErrUserNotFound {
-		logrus.WithError(fcerr).Error("Could not verify if user with this email already exists")
+		mgr.logger.WithError(fcerr).Error("Could not verify if user with this email already exists")
 		trans.Rollback()
 		return
 	} else if fcerr == nil && existingUser != nil {
@@ -66,21 +68,21 @@ func (mgr *userManager) CreateUser(user *models.User) (session *models.Session, 
 	user.Password, err = utils.HashScrypt(user.Password)
 	if err != nil {
 		fcerr = fcerror.NewError(fcerror.ErrPasswordHashingFailed, err)
-		logrus.WithError(fcerr).Error("Failed to hash new user password")
+		mgr.logger.WithError(fcerr).Error("Failed to hash new user password")
 		return
 	}
 	user.IsAdmin = false
 
 	fcerr = trans.SaveUser(user)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to save user")
+		mgr.logger.WithError(fcerr).Error("Failed to save user")
 		trans.Rollback()
 		return
 	}
 
 	fcerr = trans.Commit()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to commit transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to commit transaction")
 		return
 	}
 
@@ -97,11 +99,11 @@ func (mgr *userManager) CreateUser(user *models.User) (session *models.Session, 
 		if fcerr == nil {
 			user.IsAdmin = true
 		} else {
-			logrus.WithError(fcerr).Error("Failed to set first user an admin - ignore for now")
+			mgr.logger.WithError(fcerr).Error("Failed to set first user an admin - ignore for now")
 			fcerr = nil
 		}
 	} else if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to count users to determine whether created user should be an admin - ignore for now")
+		mgr.logger.WithError(fcerr).Error("Failed to count users to determine whether created user should be an admin - ignore for now")
 		fcerr = nil
 	}
 
@@ -117,14 +119,14 @@ func (mgr *userManager) GetUserByID(authCtx *authorization.Context, userID model
 
 	trans, fcerr := mgr.userPersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer trans.Close()
 
 	user, fcerr = trans.GetUserByID(userID)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to get user")
+		mgr.logger.WithError(fcerr).Error("Failed to get user")
 		return
 	}
 	if authCtx.Type != authorization.ContextTypeSystem {
@@ -137,14 +139,14 @@ func (mgr *userManager) GetUserByID(authCtx *authorization.Context, userID model
 func (mgr *userManager) GetUserByEmail(authCtx *authorization.Context, email string) (user *models.User, fcerr *fcerror.Error) {
 	trans, fcerr := mgr.userPersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer trans.Close()
 
 	user, fcerr = trans.GetUserByEmail(email)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
+		mgr.logger.WithError(fcerr).WithField("email", email).Warn("User with given email not found for login")
 		fcerr = fcerror.NewError(fcerror.ErrUnauthorized, nil)
 		return
 	}
@@ -187,7 +189,7 @@ func (mgr *userManager) UpdateUser(authCtx *authorization.Context, userID models
 		hashedPassword, err := utils.HashScrypt(*updateUser.Password)
 		if err != nil {
 			fcerr = fcerror.NewError(fcerror.ErrPasswordHashingFailed, err)
-			logrus.WithError(err).WithField("userID", userID).Error("Failed to hash password for UpdateUser")
+			mgr.logger.WithError(err).WithField("userID", userID).Error("Failed to hash password for UpdateUser")
 			return
 		}
 		user.Password = hashedPassword
@@ -198,14 +200,14 @@ func (mgr *userManager) UpdateUser(authCtx *authorization.Context, userID models
 
 	trans, fcerr := mgr.userPersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
 	fcerr = trans.UpdateUser(user)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": userID, "updateUser": updateUser}).Error("Failed to update user")
+		mgr.logger.WithError(fcerr).WithFields(logrus.Fields{"userID": userID, "updateUser": updateUser}).Error("Failed to update user")
 		return
 	}
 
@@ -220,13 +222,13 @@ func (mgr *userManager) CountUsers(authCtx *authorization.Context) (count int64,
 
 	trans, fcerr := mgr.userPersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 	}
 	defer trans.Close()
 
 	count, fcerr = trans.CountUsers()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to count users")
+		mgr.logger.WithError(fcerr).Error("Failed to count users")
 	}
 	return
 }

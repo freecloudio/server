@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/freecloudio/server/utils"
+)
 
 type PersistencePluginKey string
 
@@ -19,4 +23,6 @@ type Config interface {
 
 	GetFileStorageTempBasePath() string
 	GetFileStorageLocalFSBasePath() string
+
+	GetLoggingConfig() *utils.LoggingConfig
 }

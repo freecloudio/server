@@ -7,6 +7,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func (r *Router) buildNodeRoutes() {
 }
 
 func (r *Router) getNodeContentByID(c *gin.Context) {
-	authContext := getAuthContext(c)
+	authContext := getAuthContext(c, r.logger)
 	nodeID, fcerr := extractNodeID(c)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to get nodeID from request")
@@ -44,7 +45,7 @@ func (r *Router) getNodeContentByID(c *gin.Context) {
 }
 
 func (r *Router) uploadFileByID(c *gin.Context) {
-	authContext := getAuthContext(c)
+	authContext := getAuthContext(c, r.logger)
 	nodeID, fcerr := extractNodeID(c)
 	if fcerr != nil {
 		logrus.WithError(fcerr).Error("Failed to get nodeID from request")

@@ -7,9 +7,9 @@ import (
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/plugin/gin/keys"
+	"github.com/freecloudio/server/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -20,15 +20,15 @@ const (
 	authPrefix     = "Bearer "
 )
 
-func getAuthContext(c *gin.Context) *authorization.Context {
+func getAuthContext(c *gin.Context, logger utils.Logger) *authorization.Context {
 	authContextInt := c.Request.Context().Value(authContextKey)
 	if authContextInt == nil {
-		logrus.Warn("AuthContext not found in gin context")
+		logger.Warn("AuthContext not found in gin context")
 		return authorization.NewAnonymous()
 	}
 	authContext, ok := authContextInt.(*authorization.Context)
 	if !ok {
-		logrus.Warn("AuthContext in gin context is not of correct type")
+		logger.Warn("AuthContext in gin context is not of correct type")
 		return authorization.NewAnonymous()
 	}
 	return authContext

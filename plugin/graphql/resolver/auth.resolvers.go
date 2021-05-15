@@ -23,7 +23,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 }
 
 func (r *mutationResolver) Logout(ctx context.Context) (*model.MutationResult, error) {
-	authContext := getAuthContext(ctx)
+	authContext := r.getAuthContext(ctx)
 
 	var fcerr *fcerror.Error
 	if tokenInt := ctx.Value(keys.AuthTokenKey); authContext.Type == authorization.ContextTypeUser && tokenInt != nil {
@@ -44,7 +44,7 @@ func (r *sessionResolver) Token(ctx context.Context, obj *models.Session) (strin
 }
 
 func (r *sessionResolver) User(ctx context.Context, obj *models.Session) (*models.User, error) {
-	if isOnlyIDRequested(ctx) {
+	if r.isOnlyIDRequested(ctx) {
 		return &models.User{ID: obj.UserID}, nil
 	}
 	queryResolv := &queryResolver{r.Resolver}

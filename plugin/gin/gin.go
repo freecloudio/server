@@ -7,9 +7,9 @@ import (
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	ginlogrus "github.com/toorop/gin-logrus"
 )
 
@@ -18,12 +18,15 @@ type Router struct {
 	managers *manager.Managers
 	srv      *http.Server
 	cfg      config.Config
+	logger   utils.Logger
 }
 
 func NewRouter(managers *manager.Managers, cfg config.Config, addr string) (router *Router) {
+	logger := utils.CreateLogger(cfg.GetLoggingConfig())
+
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
-	ginRouter.Use(ginlogrus.Logger(logrus.New()))
+	ginRouter.Use(ginlogrus.Logger(logger))
 	ginRouter.Use(getAuthMiddleware(managers.Auth))
 
 	router = &Router{
@@ -33,7 +36,8 @@ func NewRouter(managers *manager.Managers, cfg config.Config, addr string) (rout
 			Addr:    ":8080",
 			Handler: ginRouter,
 		},
-		cfg: cfg,
+		cfg:    cfg,
+		logger: logger,
 	}
 	router.buildRoutes()
 

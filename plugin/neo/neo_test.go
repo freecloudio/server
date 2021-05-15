@@ -10,6 +10,7 @@ import (
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
 	"github.com/freecloudio/server/mock"
+	"github.com/freecloudio/server/utils"
 
 	"github.com/golang/mock/gomock"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
@@ -19,7 +20,8 @@ import (
 func createTrCtxMock(mockCtrl *gomock.Controller) (trCtx *transactionCtx, sessionMock *mock.MockSession, txMock *mock.MockTransaction) {
 	txMock = mock.NewMockTransaction(mockCtrl)
 	sessionMock = mock.NewMockSession(mockCtrl)
-	trCtx = &transactionCtx{sessionMock, txMock}
+	logger := utils.CreateLogger(&utils.LoggingConfig{})
+	trCtx = &transactionCtx{sessionMock, txMock, logger}
 	return
 }
 
@@ -208,7 +210,8 @@ func TestNewTransactionContext(t *testing.T) {
 	sessionMock, txMock := setupMockNewTransactionContext(mockCtrl, inputAccessMode)
 	defer func() { neo = nil }()
 
-	txCtx, fcerr := newTransactionContext(inputAccessMode)
+	logger := utils.CreateLogger(&utils.LoggingConfig{})
+	txCtx, fcerr := newTransactionContext(inputAccessMode, logger)
 	assert.Nil(t, fcerr, "Failed to create transaction context")
 	assert.Equal(t, sessionMock, txCtx.session, "Transaction session does not match mock")
 	assert.Equal(t, txMock, txCtx.neoTx, "Transaction does not match mock")
@@ -225,7 +228,8 @@ func TestNewTransactionContextSessionError(t *testing.T) {
 	neo = neoMock
 	defer func() { neo = nil }()
 
-	_, fcerr := newTransactionContext(inputAccessMode)
+	logger := utils.CreateLogger(&utils.LoggingConfig{})
+	_, fcerr := newTransactionContext(inputAccessMode, logger)
 	assert.NotNil(t, fcerr, "Create transaction context succeeded but should fail")
 	assert.Equal(t, fcerror.ErrDBTransactionCreationFailed, fcerr.ID, "Err ID does not match expected one")
 }
@@ -245,7 +249,8 @@ func TestNewTransactionContextTxError(t *testing.T) {
 	neo = neoMock
 	defer func() { neo = nil }()
 
-	_, fcerr := newTransactionContext(inputAccessMode)
+	logger := utils.CreateLogger(&utils.LoggingConfig{})
+	_, fcerr := newTransactionContext(inputAccessMode, logger)
 	assert.NotNil(t, fcerr, "Create transaction context succeeded but should fail")
 	assert.Equal(t, fcerror.ErrDBTransactionCreationFailed, fcerr.ID, "Err ID does not match expected one")
 }
@@ -332,7 +337,8 @@ func TestFetchNeoEdition(t *testing.T) {
 			sessionMock.EXPECT().Close().Return(nil).Times(1)
 			txMock.EXPECT().Run(gomock.Any(), gomock.Any()).Return(mockResult, test.dbErr).Times(1)
 
-			actualEdition, fcerr := fetchNeoEdition()
+			logger := utils.CreateLogger(&utils.LoggingConfig{})
+			actualEdition, fcerr := fetchNeoEdition(logger)
 			if test.dbErr == nil && test.recordSuccess {
 				assert.Equal(t, test.expectedEdition, actualEdition, "Got wrong neo edition")
 			} else {

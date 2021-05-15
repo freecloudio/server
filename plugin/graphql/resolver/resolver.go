@@ -8,9 +8,9 @@ import (
 	"github.com/freecloudio/server/application/config"
 	"github.com/freecloudio/server/application/manager"
 	"github.com/freecloudio/server/plugin/gin/keys"
+	"github.com/freecloudio/server/utils"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/sirupsen/logrus"
 )
 
 // This file will not be regenerated automatically.
@@ -26,21 +26,22 @@ type contextCache map[string]interface{}
 type Resolver struct {
 	cfg      config.Config
 	managers *manager.Managers
+	logger   utils.Logger
 }
 
 func NewResolver(cfg config.Config, managers *manager.Managers) *Resolver {
-	return &Resolver{cfg, managers}
+	return &Resolver{cfg, managers, utils.CreateLogger(cfg.GetLoggingConfig())}
 }
 
-func getAuthContext(ctx context.Context) *authorization.Context {
+func (r *Resolver) getAuthContext(ctx context.Context) *authorization.Context {
 	authContextInt := ctx.Value(keys.AuthContextKey)
 	if authContextInt == nil {
-		logrus.Warn("AuthContext not found in gin context")
+		r.logger.Warn("AuthContext not found in gin context")
 		return authorization.NewAnonymous()
 	}
 	authContext, ok := authContextInt.(*authorization.Context)
 	if !ok {
-		logrus.Warn("AuthContext in gin context is not of correct type")
+		r.logger.Warn("AuthContext in gin context is not of correct type")
 		return authorization.NewAnonymous()
 	}
 	return authContext
@@ -54,36 +55,36 @@ func ContextCacheMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func getObjectCache(ctx context.Context) contextCache {
+func (r *Resolver) getObjectCache(ctx context.Context) contextCache {
 	cacheInt := ctx.Value(contextKeyObjectCache)
 	if cacheInt == nil {
-		logrus.Warn("Could not get object cache for context")
+		r.logger.Warn("Could not get object cache for context")
 		return nil
 	}
 	cache, ok := cacheInt.(contextCache)
 	if !ok {
-		logrus.WithField("cache", cacheInt).Warn("ObjectCache in context is not of correct type")
+		r.logger.WithField("cache", cacheInt).Warn("ObjectCache in context is not of correct type")
 	}
 	return cache
 }
 
-func getObjectFromContextCache(ctx context.Context, id string) interface{} {
-	cache := getObjectCache(ctx)
+func (r *Resolver) getObjectFromContextCache(ctx context.Context, id string) interface{} {
+	cache := r.getObjectCache(ctx)
 	if cache == nil {
 		return nil
 	}
 	return cache[id]
 }
 
-func insertObjectIntoContextCache(ctx context.Context, id string, obj interface{}) {
-	cache := getObjectCache(ctx)
+func (r *Resolver) insertObjectIntoContextCache(ctx context.Context, id string, obj interface{}) {
+	cache := r.getObjectCache(ctx)
 	if cache == nil {
 		return
 	}
 	cache[id] = obj
 }
 
-func isOnlyIDRequested(ctx context.Context) bool {
+func (r *Resolver) isOnlyIDRequested(ctx context.Context) bool {
 	fields := graphql.CollectAllFields(ctx)
 	return len(fields) == 1 && fields[0] == "id"
 }

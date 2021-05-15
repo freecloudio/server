@@ -10,6 +10,8 @@ import (
 	"github.com/freecloudio/server/application/storage"
 	"github.com/freecloudio/server/domain/models"
 	"github.com/freecloudio/server/domain/models/fcerror"
+	"github.com/freecloudio/server/utils"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,6 +32,7 @@ func NewNodeManager(cfg config.Config, nodePersistence persistence.NodePersisten
 		nodePersistence: nodePersistence,
 		fileStorage:     fileStorage,
 		managers:        managers,
+		logger:          utils.CreateLogger(cfg.GetLoggingConfig()),
 	}
 
 	managers.Node = nodeMgr
@@ -41,6 +44,7 @@ type nodeManager struct {
 	nodePersistence persistence.NodePersistenceController
 	fileStorage     storage.FileStorageController
 	managers        *Managers
+	logger          utils.Logger
 }
 
 func (mgr *nodeManager) Close() {
@@ -54,20 +58,20 @@ func (mgr *nodeManager) CreateUserRootFolder(authCtx *authorization.Context, use
 
 	trans, fcerr := mgr.nodePersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
 	_, fcerr = trans.CreateUserRootFolder(userID)
 	if fcerr != nil {
-		logrus.WithField("userID", userID).WithError(fcerr).Error("Failed to create persistence user root folder")
+		mgr.logger.WithField("userID", userID).WithError(fcerr).Error("Failed to create persistence user root folder")
 		return
 	}
 
 	fcerr = mgr.fileStorage.CreateUserRootFolder(userID)
 	if fcerr != nil {
-		logrus.WithField("userID", userID).WithError(fcerr).Error("Failed to create file storage user root folder")
+		mgr.logger.WithField("userID", userID).WithError(fcerr).Error("Failed to create file storage user root folder")
 		return
 	}
 
@@ -89,24 +93,24 @@ func (mgr *nodeManager) CreateNode(authCtx *authorization.Context, node *models.
 
 	trans, fcerr := mgr.nodePersistence.StartReadWriteTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer func() { fcerr = trans.Finish(fcerr) }()
 
 	created, fcerr = trans.CreateNodeByID(authCtx.User.ID, node)
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create node")
+		mgr.logger.WithError(fcerr).Error("Failed to create node")
 		return
 	}
 	if !created {
-		logrus.WithField("node", node).Info("File or folder already exists in persistence, don't create in storage")
+		mgr.logger.WithField("node", node).Info("File or folder already exists in persistence, don't create in storage")
 		return
 	}
 
 	fcerr = mgr.fileStorage.CreateEmptyFileOrFolder(node)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("node", node).Error("Failed to create empty file or folder")
+		mgr.logger.WithError(fcerr).WithField("node", node).Error("Failed to create empty file or folder")
 	}
 
 	return
@@ -120,7 +124,7 @@ func (mgr *nodeManager) UploadFileByID(authCtx *authorization.Context, nodeID mo
 
 	fcerr = mgr.fileStorage.CopyFileFromUpload(node, uploadFilePath)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("node", node).Error("Failed to copy file from upload")
+		mgr.logger.WithError(fcerr).WithField("node", node).Error("Failed to copy file from upload")
 		return
 	}
 	return
@@ -136,14 +140,14 @@ func (mgr *nodeManager) GetNodeByPath(authCtx *authorization.Context, path strin
 
 	trans, fcerr := mgr.nodePersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer trans.Close()
 
 	node, fcerr = trans.GetNodeByPath(authCtx.User.ID, path, models.ShareModeRead)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
-		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "path": path}).Error("Failed to get node for path")
+		mgr.logger.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "path": path}).Error("Failed to get node for path")
 		return
 	}
 
@@ -158,14 +162,14 @@ func (mgr *nodeManager) GetNodeByID(authCtx *authorization.Context, nodeID model
 
 	trans, fcerr := mgr.nodePersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer trans.Close()
 
 	node, fcerr = trans.GetNodeByID(authCtx.User.ID, nodeID, models.ShareModeRead)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
-		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
+		mgr.logger.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get node for nodeID")
 		return
 	}
 
@@ -180,14 +184,14 @@ func (mgr *nodeManager) ListByID(authCtx *authorization.Context, nodeID models.N
 
 	trans, fcerr := mgr.nodePersistence.StartReadTransaction()
 	if fcerr != nil {
-		logrus.WithError(fcerr).Error("Failed to create transaction")
+		mgr.logger.WithError(fcerr).Error("Failed to create transaction")
 		return
 	}
 	defer trans.Close()
 
 	node, fcerr = trans.ListByID(authCtx.User.ID, nodeID, models.ShareModeRead)
 	if fcerr != nil && fcerr.ID != fcerror.ErrNodeNotFound {
-		logrus.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get content for nodeID")
+		mgr.logger.WithError(fcerr).WithFields(logrus.Fields{"userID": authCtx.User.ID, "nodeID": nodeID}).Error("Failed to get content for nodeID")
 		return
 	}
 
@@ -214,7 +218,7 @@ func (mgr *nodeManager) DownloadFile(authCtx *authorization.Context, nodeID mode
 	// TODO: Use node size here after it is filled? => Direct FS changes will break download
 	reader, size, fcerr = mgr.fileStorage.DownloadFile(node)
 	if fcerr != nil {
-		logrus.WithError(fcerr).WithField("node", node).Error("Failed to download file")
+		mgr.logger.WithError(fcerr).WithField("node", node).Error("Failed to download file")
 		return
 	}
 	return
